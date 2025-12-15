@@ -170,6 +170,40 @@ word_semantics(tang, verb_trans,
 word_semantics(cho, verb_trans,
     lambda(y, lambda(x, pred(cho, [x, y])))).
 
+% --- Thêm các động từ để bao phủ tất cả KB ---
+word_semantics(song_tai, verb_trans,
+    lambda(y, lambda(x, pred(song_tai, [x, y])))).
+
+word_semantics(song_o, verb_trans,
+    lambda(y, lambda(x, pred(song_tai, [x, y])))).
+
+word_semantics(nam_ngu, verb_trans,
+    lambda(y, lambda(x, pred(nam_ngu, [x, y])))).
+
+word_semantics(nam, verb_trans,
+    lambda(y, lambda(x, pred(nam_ngu, [x, y])))).
+
+word_semantics(ngu_o, verb_trans,
+    lambda(y, lambda(x, pred(nam_ngu, [x, y])))).
+
+word_semantics(em_gai, verb_trans,
+    lambda(y, lambda(x, pred(em_gai, [x, y])))).
+
+word_semantics(la_em_gai, verb_trans,
+    lambda(y, lambda(x, pred(em_gai, [x, y])))).
+
+word_semantics(mau_sac, verb_trans,
+    lambda(y, lambda(x, pred(mau_sac, [x, y])))).
+
+word_semantics(vi_tri, verb_trans,
+    lambda(y, lambda(x, pred(vi_tri, [x, y])))).
+
+word_semantics(chua, verb_trans,
+    lambda(y, lambda(x, pred(chua, [x, y])))).
+
+word_semantics(phia_sau, verb_trans,
+    lambda(y, lambda(x, pred(phia_sau, [x, y])))).
+
 % ========================================
 % ADJECTIVES - Type: (e->t)->(e->t)
 % Semantics: λP.λx.(P(x) ∧ property(x))

@@ -31,11 +31,31 @@ parse(Tokens, Type, Tree) :-
 % "Gau hien khong?" → S[yn]
 % ========================================
 
+% Standard pattern: NP VP QM
 sentence_yn(tree(s_yn, [NP, VP, QM])) -->
     noun_phrase(NP),
     verb_phrase(VP),
     question_marker(QM).
 
+% Attribute pattern: "Xe mau xanh phai khong" -> NP Attr Value QM
+% Pattern: NP + Attr + Value + (phai) + khong
+sentence_yn(tree(s_yn_attr, [NP, Attr, Value, QM])) -->
+    noun_phrase(NP),
+    [Attr],
+    { member(Attr, [mau, ten, vi_tri, la]) },
+    [Value],
+    question_marker(QM).
+
+% Alternative: just "phai khong" combined
+sentence_yn(tree(s_yn_attr, [NP, Attr, Value, QM])) -->
+    noun_phrase(NP),
+    [Attr],
+    { member(Attr, [mau, ten, vi_tri, la]) },
+    [Value],
+    [phai],
+    question_marker(QM).
+
+% Simple pattern without QM
 sentence_yn(tree(s_yn, [NP, VP])) -->
     noun_phrase(NP),
     verb_phrase(VP).
@@ -73,14 +93,33 @@ wh_word_who(tree(wh, [word(ai, wh_word)])) -->
 
 % ========================================
 % WH-QUESTIONS: WHAT
-% "Meo an gi?" → S[wh:what]
+% Covering all possible patterns
 % ========================================
 
+% Pattern 1: "Subject Verb gi" - Standard transitive
+% Example: "Linh thich gi", "Meo ten gi"
 sentence_what(tree(s_wh, [NP, V, WH])) -->
     noun_phrase(NP),
     verb_trans(V),
     wh_word_what(WH).
 
+% Pattern 2: "X la gi" - Definition question
+% Example: "Miu la gi" -> animal
+sentence_what(tree(s_wh_def, [NP, WH])) -->
+    noun_phrase(NP),
+    [la],
+    wh_word_what(WH).
+
+% Pattern 3: "X mau gi" - Color question
+% Example: "Xe mau gi" -> xanh
+sentence_what(tree(s_wh_attr, [NP, Attr, WH])) -->
+    noun_phrase(NP),
+    [Attr],
+    { member(Attr, [mau, ten, vi_tri]) },
+    wh_word_what(WH).
+
+% Pattern 4: "X o dau" handled by WHERE, but also "X nam o dau"
+% Pattern 5: Generic attribute query fallback
 sentence_what(tree(s_wh, [WH, Prop, PP])) -->
     wh_word_what(WH),
     property_phrase(Prop),
@@ -200,6 +239,9 @@ question_marker(tree(qm, [word(khong, question_marker)])) -->
 
 question_marker(tree(qm, [word(ko, question_marker)])) -->
     [ko].
+
+question_marker(tree(qm, [word(phai, question_marker)])) -->
+    [phai].
 
 question_marker(tree(qm, [word('?', question_marker)])) -->
     ['?'].

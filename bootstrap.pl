@@ -54,6 +54,20 @@ query(Question, Type) :-
     analyzer:tokenize(Question, Tokens),
     format('~w~n', [Tokens]),
     
+    % Stage 2-6: Try to parse and process, handle failures gracefully
+    ( process_query(Tokens, Type) ->
+        true
+    ;
+        nl,
+        writeln('========================================'),
+        writeln('Answer: Khong tim thay'),
+        writeln('(Tu khong co trong tu vung hoac cau hoi khong hop le)'),
+        writeln('========================================'),
+        nl
+    ).
+
+% Helper predicate to process query after tokenization
+process_query(Tokens, Type) :-
     % Stage 2: Syntactic Analysis
     write('-> Parsing... '),
     structures:parse(Tokens, Type, Tree),
@@ -96,17 +110,26 @@ query(Question, Type) :-
         writeln('OK'),
         nl,
         writeln('========================================'),
-        format('Answer: ~w~n', [Entities]),
+        ( Entities = [] ->
+            writeln('Answer: Khong tim thay')
+        ;
+            format('Answer: ~w~n', [Entities])
+        ),
         writeln('========================================')
     ; Type = what ->
         theorem:find_values(FOL, Values),
         writeln('OK'),
         nl,
         writeln('========================================'),
-        format('Answer: ~w~n', [Values]),
+        ( Values = [] ->
+            writeln('Answer: Khong tim thay')
+        ;
+            format('Answer: ~w~n', [Values])
+        ),
         writeln('========================================')
     ),
     nl.
+
 
 % ========================================
 % INTERACTIVE SHELL

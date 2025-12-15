@@ -48,6 +48,9 @@ build_drs(wh_question(who, pred(P, Args)), wh_question(who, pred(P, Args))) :- !
 % WH-question: what - trả về câu hỏi để find_values xử lý  
 build_drs(wh_question(what, pred(P, Args)), wh_question(what, pred(P, Args))) :- !.
 
+% WH-question: what_is - definition question "X la gi"
+build_drs(wh_question(what_is, Subject), wh_question(what_is, Subject)) :- !.
+
 % WH-question: where - trả về câu hỏi để find_values xử lý
 build_drs(wh_question(where, pred(P, Args)), wh_question(where, pred(P, Args))) :- !.
 

@@ -32,6 +32,27 @@ compose(tree(s_wh, [NP, V, WH]), Semantics) :-
     extract_predicate(VSem, Pred),
     Semantics = wh_question(what, pred(Pred, [Subject, _])).
 
+% Pattern: [Subject] la gi - Definition question
+% Ví dụ: "Miu la gi" -> Miu is what type?
+compose(tree(s_wh_def, [NP, _WH]), Semantics) :- !,
+    compose(NP, NPSem),
+    extract_entity(NPSem, Subject),
+    Semantics = wh_question(what_is, Subject).
+
+% Pattern: [Subject] [Attr] gi - Attribute question
+% Ví dụ: "Xe mau gi" -> mau_sac(xe_dap, X)
+compose(tree(s_wh_attr, [NP, Attr, _WH]), Semantics) :- !,
+    compose(NP, NPSem),
+    extract_entity(NPSem, Subject),
+    % Map attribute word to predicate
+    attr_to_pred(Attr, Pred),
+    Semantics = wh_question(what, pred(Pred, [Subject, _])).
+
+% Mapping từ attribute word sang predicate name
+attr_to_pred(mau, mau_sac).
+attr_to_pred(ten, ten).
+attr_to_pred(vi_tri, vi_tri).
+
 % ============================================
 % LOẠI 2: CÂU HỎI "AI" (WHO)
 % Pattern: Ai [Verb] [Object]
@@ -84,6 +105,14 @@ compose(tree(s_wh, [NP, _Prep, WH]), Semantics) :-
 % Pattern: [Subject] [Verb] [Object] khong
 % Ví dụ: "Linh thich hoa khong", "Nhan so huu xe dap khong"
 % ============================================
+
+% Pattern: [Subject] [Attr] [Value] khong - Attribute Yes/No
+% Ví dụ: "Xe mau xanh phai khong" -> mau_sac(xe_dap, xanh)?
+compose(tree(s_yn_attr, [NP, Attr, Value, _QM]), Semantics) :- !,
+    compose(NP, NPSem),
+    extract_entity(NPSem, Subject),
+    attr_to_pred(Attr, Pred),
+    Semantics = pred(Pred, [Subject, Value]).
 
 compose(tree(s_yn, [NP, VP, _QM]), Semantics) :- !,
     compose(NP, NPSem),

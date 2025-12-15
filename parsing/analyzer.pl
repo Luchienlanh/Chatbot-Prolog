@@ -9,6 +9,9 @@
     analyze_morphology/2
 ]).
 
+:- use_module('../linguistic/vocabulary').
+:- use_module('../knowledge/repository').
+
 % ========================================
 % TOKENIZATION
 % ========================================
@@ -17,7 +20,24 @@ tokenize(String, Tokens) :-
     normalize_string(String, Normalized),
     split_string(Normalized, " \t\n", "", TokenStrings),
     maplist(string_atom, TokenStrings, RawTokens),
-    filter_empty(RawTokens, Tokens).
+    filter_empty(RawTokens, FilteredTokens),
+    merge_compound_words(FilteredTokens, Tokens).
+
+% Merge compound words like "so huu" -> "so_huu"
+merge_compound_words([], []).
+merge_compound_words([W1, W2 | Rest], [Merged | MergedRest]) :-
+    atom_concat(W1, '_', Temp),
+    atom_concat(Temp, W2, Merged),
+    is_known_word(Merged), !,
+    merge_compound_words(Rest, MergedRest).
+merge_compound_words([W | Rest], [W | MergedRest]) :-
+    merge_compound_words(Rest, MergedRest).
+
+% Check if word exists in vocabulary
+is_known_word(Word) :-
+    vocabulary:word_semantics(Word, _, _), !.
+is_known_word(Word) :-
+    repository:entity(Word, _).
 
 normalize_string(String, Normalized) :-
     string_lower(String, Lower),

@@ -1,0 +1,366 @@
+================================================================================
+                    CẤU TRÚC THƯ MỤC VÀ ĐỐI CHIẾU YÊU CẦU ĐỒ ÁN
+                    Vietnamese Q&A System - Compositional Semantics
+================================================================================
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                           1. CẤU TRÚC THƯ MỤC                                 ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+NNHTT/
+├── bootstrap.pl                 # Entry point - khởi tạo hệ thống và query interface
+├── test_debug.pl                # File test và debug
+├── Slide-DOAN-01.docx           # File yêu cầu đồ án
+├── Slide-DOAN-01.pdf            # PDF yêu cầu đồ án
+│
+├── knowledge/                   # MODULE TRI THỨC
+│   └── repository.pl            # Knowledge Base - Facts và Entities
+│
+├── linguistic/                  # MODULE NGÔN NGỮ
+│   ├── vocabulary.pl            # Từ vựng + Lambda semantics cho từng từ
+│   └── composition.pl           # Lambda calculus + Beta reduction
+│
+├── parsing/                     # MODULE PHÂN TÍCH CÚ PHÁP
+│   ├── analyzer.pl              # Tokenization + Morphological analysis
+│   └── structures.pl            # DCG Grammar + Parse trees
+│
+├── logic/                       # MODULE LOGIC
+│   ├── discourse.pl             # DRS (Discourse Representation Structures)
+│   └── firstorder.pl            # FOL (First-Order Logic) conversion
+│
+├── reasoning/                   # MODULE SUY DIỄN
+│   ├── inference.pl             # Forward chaining + Inference rules
+│   └── theorem.pl               # Theorem proving + Query resolution
+│
+└── interface/                   # MODULE GIAO DIỆN
+    └── shell.pl                 # Interactive REPL shell
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║               2. ĐỐI CHIẾU YÊU CẦU VỚI CODE HIỆN TẠI                          ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+--------------------------------------------------------------------------------
+YÊU CẦU 1: GIỚI THIỆU ĐỒ ÁN - THU THẬP CÂU HỎI
+--------------------------------------------------------------------------------
+Yêu cầu:
+  - Tự chọn đoạn văn miêu tả 7-10 câu
+  - Thu thập câu hỏi xác nhận (Yes/No) và hỏi ai/cái gì (Who/What)
+  - Xác định dạng câu hỏi
+
+File thực hiện:
+  ├── knowledge/repository.pl     [✓] Đoạn văn về Nhân, Linh, Miu - 7+ sự thật
+  ├── interface/shell.pl          [✓] Hỗ trợ 3 dạng: what, who, yn
+  └── bootstrap.pl                [✓] Demo queries với các dạng câu hỏi
+
+Dạng câu hỏi được hỗ trợ:
+  [1] Yes/No (yn):   "Linh thich hoa khong" → TRUE/FALSE
+  [2] Who (who):     "Ai cho an Miu" → [nhan]
+  [3] What (what):   "Meo ten gi" → [miu]
+
+Status: ✅ ĐẦY ĐỦ
+
+--------------------------------------------------------------------------------
+YÊU CẦU 2: TỪ VỰNG BẬC MỘT (First-Order Vocabulary)
+--------------------------------------------------------------------------------
+Yêu cầu:
+  - Xác định tên hằng, hàm, quan hệ với số ngôi
+  - Kiểm tra tính hợp lệ của biểu thức
+
+File thực hiện:
+  ├── linguistic/vocabulary.pl    [✓] Định nghĩa từ vựng với type system
+  │   ├── Proper nouns (entities): nhan, linh, miu, xe_dap, hoa...
+  │   ├── Common nouns: nguoi, dong_vat, thu_cung
+  │   ├── Intransitive verbs (1-ngôi): hien, de_thuong, ngu
+  │   ├── Transitive verbs (2-ngôi): thich, so_huu, cho_an
+  │   ├── Determiners: mot, moi, khong
+  │   ├── WH-words: ai, gi, dau, nao
+  │   └── type_check/2 - Kiểm tra kiểu biểu thức
+  │
+  └── knowledge/repository.pl     [✓] Entities với type
+      └── entity(Name, Type): entity(nhan, person), entity(miu, animal)...
+
+Chi tiết từ vựng:
+  - Hằng: nhan, linh, miu, xe_dap, hoa, vuon, nha, truong...
+  - Vị từ 1 ngôi: nho, ngoai_o, la_meo, qua_tang
+  - Vị từ 2 ngôi: so_huu, thich, cho_an, song_cung, vi_tri, ngam
+  - Vị từ 3 ngôi: tang, cho, noi_ngam
+
+Status: ✅ ĐẦY ĐỦ
+
+--------------------------------------------------------------------------------
+YÊU CẦU 3: PHÂN TÍCH CÚ PHÁP
+--------------------------------------------------------------------------------
+Yêu cầu:
+  - Phân tích tất cả dạng câu hỏi đã thu thập
+  - Xây dựng văn phạm (grammar)
+  - Xử lý đệ quy trái
+  - Kết quả: cây cú pháp, luật sản sinh
+
+File thực hiện:
+  ├── parsing/analyzer.pl         [✓] Tokenization
+  │   ├── tokenize/2 - Tách câu thành tokens
+  │   ├── normalize_string/2 - Chuẩn hóa chuỗi
+  │   ├── synonym/2 - Xử lý từ đồng nghĩa
+  │   └── analyze_morphology/2 - Phân tích hình thái
+  │
+  └── parsing/structures.pl       [✓] DCG Grammar với parse trees
+      ├── parse/3 - Interface chính
+      ├── sentence_yn/1 - Câu Yes/No
+      ├── sentence_who/1 - Câu hỏi Ai
+      ├── sentence_what/1 - Câu hỏi Gì
+      ├── sentence_where/1 - Câu hỏi Ở đâu
+      ├── noun_phrase/1 - Cụm danh từ
+      ├── verb_phrase/1 - Cụm động từ
+      └── determiner/1, adjective/1 - Các thành phần khác
+
+Luật sản sinh (Production Rules):
+  S[yn] → NP VP QM
+  S[wh:who] → WH[ai] VP
+  S[wh:what] → NP V WH[gi]
+  NP → Det N | Adj N | ProperNoun
+  VP → V_intrans | V_trans NP
+
+Status: ✅ ĐẦY ĐỦ
+
+--------------------------------------------------------------------------------
+YÊU CẦU 4: CÁC QUY TẮC NGỮ NGHĨA
+--------------------------------------------------------------------------------
+Yêu cầu:
+  - Biểu diễn nghĩa từ theo DRS bằng biểu thức lambda
+  - Quy tắc tính toán ngữ nghĩa theo cú pháp
+  - Phương pháp xác định đồng sở chỉ
+
+File thực hiện:
+  ├── linguistic/vocabulary.pl    [✓] Lambda expressions cho từ vựng
+  │   ├── Type system: e, t, e->t, e->e->t, (e->t)->t
+  │   ├── Proper nouns: λp.p(const(entity))
+  │   ├── Intrans verbs: λx.pred(property, [x])
+  │   ├── Trans verbs: λy.λx.pred(relation, [x, y])
+  │   ├── Determiners: λn.λvp.∃x(n(x) ∧ vp(x))
+  │   └── WH-words: λp.wh_question(type, p)
+  │
+  ├── linguistic/composition.pl   [✓] Tính toán ngữ nghĩa
+  │   ├── compose/2 - Semantic composition từ parse tree
+  │   ├── beta_reduce/2 - Single step reduction
+  │   ├── beta_reduce_full/2 - Full reduction
+  │   ├── substitute/4 - Variable substitution
+  │   ├── alpha_convert/3 - Alpha conversion
+  │   └── free_variables/2 - Tìm biến tự do
+  │
+  └── logic/discourse.pl          [✓] DRS construction
+      ├── build_drs/2 - Xây dựng DRS từ lambda term
+      ├── merge_drs/3 - Kết hợp 2 DRS
+      ├── negate_drs/2 - Phủ định DRS
+      ├── pretty_print/1 - In DRS đẹp
+      └── Xử lý wh_question cho who/what/where
+
+Quy tắc ngữ nghĩa:
+  [Proper Noun] → λP.P(const(E))
+  [Trans Verb]  → λy.λx.pred(R, [x,y])
+  [S → NP VP]   → compose(NP)(VP) với beta reduction
+  [∃]           → exists(X, Body)
+  [∀]           → forall(X, Body)
+
+Status: ✅ ĐẦY ĐỦ
+
+--------------------------------------------------------------------------------
+YÊU CẦU 5: CÀI ĐẶT VỚI PROLOG
+--------------------------------------------------------------------------------
+Yêu cầu:
+  5.1 Tri thức chung:
+      - Từ vựng bậc một (kiểm tra hợp lệ)
+      - Các vị từ (thể hiện nội dung đoạn văn)
+      - Quan hệ đối xứng và bắc cầu
+
+  5.2 Dịch câu hỏi sang FOL:
+      - Tách câu, tách từ
+      - Dịch sang DRS
+      - Dịch DRS sang FOL
+      - Trả lời câu hỏi
+
+File thực hiện:
+  ├── knowledge/repository.pl     [✓] Tri thức
+  │   ├── fact/1 - Các sự thật dạng pred(P, [Args])
+  │   ├── entity/2 - Thực thể với type
+  │   ├── initialize_kb/0 - Khởi tạo KB
+  │   └── add_fact/1, remove_fact/1 - Quản lý động
+  │
+  ├── reasoning/inference.pl      [✓] Suy diễn
+  │   ├── rule/2 - Quy tắc suy diễn
+  │   ├── infer/0 - Forward chaining
+  │   └── Quy tắc: cho_an → cham_soc, song_cung → gia_dinh...
+  │
+  ├── logic/firstorder.pl         [✓] FOL conversion
+  │   ├── convert/2 - DRS → FOL
+  │   ├── simplify/2 - Đơn giản hóa FOL
+  │   ├── to_cnf/2 - Chuyển đổi CNF
+  │   ├── negate/2 - De Morgan's laws
+  │   └── skolemize/2 - Skolemization
+  │
+  ├── reasoning/theorem.pl        [✓] Theorem proving
+  │   ├── prove/1 - Chứng minh FOL formula
+  │   ├── find_entities/2 - Tìm answer cho WHO
+  │   ├── find_values/2 - Tìm answer cho WHAT
+  │   └── prove_with_trace/1 - Debug proving
+  │
+  ├── bootstrap.pl                [✓] Entry point
+  │   ├── initialize/0 - Khởi tạo hệ thống
+  │   ├── query/2 - Main query interface
+  │   ├── trace_query/2 - Full tracing
+  │   └── demo/0 - Demo queries
+  │
+  └── interface/shell.pl          [✓] Interactive shell
+      ├── start_repl/0 - Bắt đầu REPL
+      ├── process_input/1 - Xử lý input
+      └── detect_type/2 - Nhận diện loại câu hỏi
+
+Status: ✅ ĐẦY ĐỦ
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    3. PIPELINE XỬ LÝ CÂU HỎI                                  ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+Input: "Linh thich gi"
+       ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STAGE 1: TOKENIZATION (analyzer.pl)                                     │
+│ → ["linh", "thich", "gi"]                                               │
+└─────────────────────────────────────────────────────────────────────────┘
+       ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STAGE 2: PARSING (structures.pl)                                        │
+│ → tree(s_wh, [                                                          │
+│       tree(np, [word(linh, noun_proper)]),                              │
+│       tree(v, [word(thich, verb_trans)]),                               │
+│       tree(wh, [word(gi, wh_word)])                                     │
+│   ])                                                                    │
+└─────────────────────────────────────────────────────────────────────────┘
+       ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STAGE 3: LAMBDA COMPOSITION (composition.pl)                            │
+│ → wh_question(what, pred(thich, [linh, _]))                            │
+└─────────────────────────────────────────────────────────────────────────┘
+       ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STAGE 4: DRS CONSTRUCTION (discourse.pl)                                │
+│ → wh_question(what, pred(thich, [linh, _]))                            │
+└─────────────────────────────────────────────────────────────────────────┘
+       ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STAGE 5: FOL CONVERSION (firstorder.pl)                                 │
+│ → wh_question(what, pred(thich, [linh, _]))                            │
+└─────────────────────────────────────────────────────────────────────────┘
+       ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STAGE 6: THEOREM PROVING (theorem.pl)                                   │
+│ → find_values(wh_question(...)) → [xe_dap, hoa]                        │
+└─────────────────────────────────────────────────────────────────────────┘
+       ↓
+Output: [xe_dap, hoa]
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    4. ĐOẠN VĂN VÀ TRI THỨC                                    ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+Đoạn văn mô tả (7+ câu):
+------------------------------------
+1. Linh là em gái của Nhân.
+2. Nhân và Linh sống tại một ngôi nhà nhỏ ở ngoại ô.
+3. Nhân sở hữu một chiếc xe đạp màu xanh.
+4. Bố Nhân đã tặng xe đạp này cho Nhân.
+5. Hàng ngày, Nhân chở Linh đến trường bằng xe đạp.
+6. Linh thích xe đạp vì anh chở em đi học.
+7. Linh cũng thích hoa.
+8. Linh có một con mèo tên Miu.
+9. Miu nằm ngủ trên ghế gỗ trong phòng khách.
+10. Nhân cho Miu ăn và chơi với Miu.
+11. Phía sau nhà có một khu vườn chứa nhiều hoa.
+12. Linh thường ngắm hoa trong vườn.
+
+Tri thức được biểu diễn trong repository.pl:
+------------------------------------
+- Entities (13): nhan, linh, bo_nhan, miu, xe_dap, ghe_go, nha, phong_khach, vuon, truong, hoa
+- Facts (23): em_gai, song_tai, song_cung, nho, ngoai_o, so_huu, mau_sac, tang, qua_tang,
+              cho, dung_de, thich, ly_do_thich, ten, la_meo, nam_ngu, vi_tri, cho_an,
+              choi_voi, phia_sau, chua, ngam, noi_ngam
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    5. CÂU HỎI MẪU VÀ CÂU TRẢ LỜI                              ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+Dạng WHAT (Cái gì):
+-------------------
+| Câu hỏi              | Loại | Câu trả lời kỳ vọng |
+|----------------------|------|---------------------|
+| Meo ten gi           | what | [miu]               |
+| Linh thich gi        | what | [xe_dap, hoa]       |
+| Linh ngam gi         | what | [hoa]               |
+| Nhan so huu gi       | what | [xe_dap]            |
+
+Dạng WHO (Ai):
+--------------
+| Câu hỏi              | Loại | Câu trả lời kỳ vọng |
+|----------------------|------|---------------------|
+| Ai cho an Miu        | who  | [nhan]              |
+| Ai so huu xe dap     | who  | [nhan]              |
+| Ai thich hoa         | who  | [linh]              |
+| Ai song cung Linh    | who  | [nhan]              |
+
+Dạng YES/NO (Có/Không):
+-----------------------
+| Câu hỏi                   | Loại | Câu trả lời kỳ vọng |
+|---------------------------|------|---------------------|
+| Linh thich hoa khong      | yn   | YES (True)          |
+| Nhan so huu xe dap khong  | yn   | YES (True)          |
+| Miu la meo khong          | yn   | YES (True)          |
+
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    6. TỔNG KẾT TRẠNG THÁI                                     ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ YÊU CẦU                          │ TRẠNG THÁI │ FILE(S)                 │
+├──────────────────────────────────┼────────────┼─────────────────────────┤
+│ 1. Thu thập câu hỏi              │     ✅     │ repository.pl, shell.pl │
+│ 2. Từ vựng bậc một               │     ✅     │ vocabulary.pl           │
+│ 3. Phân tích cú pháp             │     ✅     │ analyzer.pl,structures.pl│
+│ 4. Quy tắc ngữ nghĩa (Lambda/DRS)│     ✅     │ composition.pl,discourse│
+│ 5. Cài đặt với Prolog            │     ✅     │ Tất cả các file         │
+│    - 5.1 Tri thức chung          │     ✅     │ repository.pl,inference │
+│    - 5.2 Dịch sang FOL           │     ✅     │ firstorder.pl           │
+│    - 5.3 Theorem proving         │     ✅     │ theorem.pl              │
+│    - 5.4 Trả lời câu hỏi         │     ✅     │ theorem.pl, bootstrap.pl│
+└─────────────────────────────────────────────────────────────────────────┘
+
+KẾT LUẬN: TẤT CẢ YÊU CẦU ĐÃ ĐƯỢC THỰC HIỆN ĐẦY ĐỦ ✅
+
+================================================================================
+                           HƯỚNG DẪN SỬ DỤNG
+================================================================================
+
+1. Load hệ thống:
+   ?- [bootstrap].
+
+2. Chạy demo:
+   ?- demo.
+
+3. Query trực tiếp:
+   ?- query("Linh thich gi", what).
+   ?- query("Ai cho an Miu", who).
+   ?- query("Linh thich hoa khong", yn).
+
+4. Interactive mode:
+   ?- interactive.
+   > Linh thich gi
+   > Ai so huu xe dap
+   > exit
+
+5. Trace debugging:
+   ?- trace_query("Linh thich gi", what).
+
+================================================================================

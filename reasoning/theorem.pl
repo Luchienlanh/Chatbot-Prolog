@@ -128,6 +128,12 @@ find_entities(and(pred(Type, [Var]), Condition), Entities) :-
 % FIND VALUES (for WHAT questions)
 % ========================================
 
+% WH question: "Miu la gi" → wh_question(what_is, miu)
+find_values(wh_question(what_is, Subject), Values) :- !,
+    findall(Type,
+        repository:entity(Subject, Type),
+        Values).
+
 % WH question: "Meo ten gi" → wh_question(what, pred(ten, [miu, _]))
 find_values(wh_question(what, pred(Pred, [Subject, _])), Values) :- !,
     findall(Value,
