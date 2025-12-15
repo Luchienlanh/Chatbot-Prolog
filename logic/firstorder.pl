@@ -14,6 +14,9 @@
 % DRS TO FOL CONVERSION
 % ========================================
 
+% WH-questions: pass through unchanged - theorem.pl sẽ xử lý
+convert(wh_question(Type, Body), wh_question(Type, Body)) :- !.
+
 % Empty DRS → true
 convert(drs([], []), true) :- !.
 

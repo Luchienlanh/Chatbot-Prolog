@@ -99,6 +99,16 @@ prove_forall(Var, Body) :-
 % FIND ENTITIES (for WHO questions)
 % ========================================
 
+find_entities(wh_question(who, pred(Pred, [_X, Object])), Entities) :- !,
+    findall(Entity,
+        repository:fact(pred(Pred, [Entity, Object])),
+        Entities).
+
+find_entities(wh_question(who, pred(Pred, [Object, _X])), Entities) :- !,
+    findall(Entity,
+        repository:fact(pred(Pred, [Object, Entity])),
+        Entities).
+
 find_entities(exists(Var, Body), Entities) :-
     findall(Var, 
         ( find_substitution(Var, Body, Var),
@@ -118,6 +128,18 @@ find_entities(and(pred(Type, [Var]), Condition), Entities) :-
 % FIND VALUES (for WHAT questions)
 % ========================================
 
+% WH question: "Meo ten gi" → wh_question(what, pred(ten, [miu, _]))
+find_values(wh_question(what, pred(Pred, [Subject, _])), Values) :- !,
+    findall(Value,
+        repository:fact(pred(Pred, [Subject, Value])),
+        Values).
+
+% WH question reverse: find first argument
+find_values(wh_question(what, pred(Pred, [_, Object])), Values) :- !,
+    findall(Value,
+        repository:fact(pred(Pred, [Value, Object])),
+        Values).
+
 find_values(exists(Var, Body), Values) :-
     findall(Var,
         substitute_and_prove(Var, Var, Body),
@@ -127,6 +149,25 @@ find_values(pred(Relation, [Subject, Var]), Values) :-
     findall(Value,
         repository:fact(pred(Relation, [Subject, Value])),
         Values).
+
+% Handle reversed order (Var is first argument)
+find_values(pred(Relation, [Var, Object]), Values) :-
+    var(Var),
+    findall(Value,
+        repository:fact(pred(Relation, [Value, Object])),
+        Values).
+
+% General search - try all variations
+find_values(wh_question(what, pred(Relation, Args)), Values) :-
+    findall(Value,
+        search_fact_values(Relation, Args, Value),
+        Values).
+
+search_fact_values(Relation, [Subject, _], Value) :-
+    repository:fact(pred(Relation, [Subject, Value])).
+
+search_fact_values(Relation, [_, Object], Value) :-
+    repository:fact(pred(Relation, [Value, Object])).
 
 % ========================================
 % PROVE WITH TRACE

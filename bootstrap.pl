@@ -44,67 +44,67 @@ initialize :-
 
 query(Question, Type) :-
     writeln(''),
-    writeln('═══════════════════════════════════════'),
+    writeln('========================================'),
     format('Query: ~w~n', [Question]),
-    writeln('═══════════════════════════════════════'),
+    writeln('========================================'),
     nl,
     
     % Stage 1: Tokenization
-    write('→ Tokenization... '),
+    write('-> Tokenization... '),
     analyzer:tokenize(Question, Tokens),
     format('~w~n', [Tokens]),
     
     % Stage 2: Syntactic Analysis
-    write('→ Parsing... '),
+    write('-> Parsing... '),
     structures:parse(Tokens, Type, Tree),
-    writeln('✓'),
+    writeln('OK'),
     
     % Stage 3: Semantic Composition (Lambda)
-    write('→ Lambda Composition... '),
+    write('-> Lambda Composition... '),
     composition:compose(Tree, Lambda),
-    format('~w~n', [Lambda]),
+    writeln('OK'),
     
     % Stage 4: DRS Construction
-    write('→ Building DRS... '),
+    write('-> Building DRS... '),
     discourse:build_drs(Lambda, DRS),
-    format('~w~n', [DRS]),
+    writeln('OK'),
     
     % Stage 5: FOL Conversion
-    write('→ Converting to FOL... '),
+    write('-> Converting to FOL... '),
     firstorder:convert(DRS, FOL),
-    format('~w~n', [FOL]),
+    writeln('OK'),
     
     % Stage 6: Theorem Proving
     nl,
-    write('→ Proving... '),
+    write('-> Proving... '),
     ( Type = yn ->
         ( theorem:prove(FOL) ->
-            writeln('✓ TRUE'),
+            writeln('TRUE'),
             nl,
-            writeln('═══════════════════════════════════════'),
-            writeln('Answer: YES / CÓ'),
-            writeln('═══════════════════════════════════════')
+            writeln('========================================'),
+            writeln('Answer: YES / CO'),
+            writeln('========================================')
         ;
-            writeln('✗ FALSE'),
+            writeln('FALSE'),
             nl,
-            writeln('═══════════════════════════════════════'),
-            writeln('Answer: NO / KHÔNG'),
-            writeln('═══════════════════════════════════════')
+            writeln('========================================'),
+            writeln('Answer: NO / KHONG'),
+            writeln('========================================')
         )
     ; Type = who ->
         theorem:find_entities(FOL, Entities),
-        writeln('✓'),
+        writeln('OK'),
         nl,
-        writeln('═══════════════════════════════════════'),
+        writeln('========================================'),
         format('Answer: ~w~n', [Entities]),
-        writeln('═══════════════════════════════════════')
+        writeln('========================================')
     ; Type = what ->
         theorem:find_values(FOL, Values),
-        writeln('✓'),
+        writeln('OK'),
         nl,
-        writeln('═══════════════════════════════════════'),
+        writeln('========================================'),
         format('Answer: ~w~n', [Values]),
-        writeln('═══════════════════════════════════════')
+        writeln('========================================')
     ),
     nl.
 
@@ -163,12 +163,19 @@ trace_query(Question, Type) :-
 
 demo :-
     initialize,
-    writeln('Running demo queries...'),
+    writeln('Chạy các câu hỏi demo với data mới...'),
     nl,
     
-    query("Gau hien khong", yn),
-    query("Ai dat Gau", who),
-    query("Meo an gi", what).
+    writeln('--- Câu hỏi GÌ (what) ---'),
+    query("Meo ten gi", what),
+    query("Linh thich gi", what),
+    
+    writeln('--- Câu hỏi AI (who) ---'),
+    query("Ai cho an Miu", who),
+    query("Ai so huu xe dap", who),
+    
+    writeln('--- Câu hỏi CÓ/KHÔNG (yn) ---'),
+    query("Linh thich hoa khong", yn).
 
 % ========================================
 % STARTUP

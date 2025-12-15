@@ -15,30 +15,183 @@
 % ========================================
 % SEMANTIC COMPOSITION
 % Combine semantics according to syntactic structure
+% Giải pháp tổng quát cho từng loại câu hỏi
 % ========================================
+
+% ============================================
+% LOẠI 1: CÂU HỎI "GÌ" (WHAT)
+% Pattern: [Subject] [Verb] gi
+% Ví dụ: "Meo ten gi", "Linh thich gi"
+% ============================================
+
+compose(tree(s_wh, [NP, V, WH]), Semantics) :- 
+    WH = tree(wh, [word(gi, wh_word)]), !,
+    compose(NP, NPSem),
+    compose(V, VSem),
+    extract_entity(NPSem, Subject),
+    extract_predicate(VSem, Pred),
+    Semantics = wh_question(what, pred(Pred, [Subject, _])).
+
+% ============================================
+% LOẠI 2: CÂU HỎI "AI" (WHO)
+% Pattern: Ai [Verb] [Object]
+% Ví dụ: "Ai cho an Miu", "Ai so huu xe dap"
+% ============================================
+
+% Pattern 2A: Compound verb "Ai cho an miu" = "Ai cho_an miu"
+compose(tree(s_wh, [WH, V1Word, V2Word, NP]), Semantics) :-
+    WH = tree(wh, [word(ai, wh_word)]), !,
+    % Merge compound verb: V1Word + _ + V2Word
+    atom_concat(V1Word, '_', Temp),
+    atom_concat(Temp, V2Word, CompoundVerb),
+    compose(NP, NPSem),
+    extract_entity(NPSem, Object),
+    Semantics = wh_question(who, pred(CompoundVerb, [_, Object])).
+
+% Pattern 2B: Standard "Ai [VP]"
+compose(tree(s_wh, [WH, VP]), Semantics) :-
+    WH = tree(wh, [word(ai, wh_word)]), !,
+    compose(VP, VPSem),
+    ( VPSem = pred(Pred, [Object]) ->
+        Semantics = wh_question(who, pred(Pred, [_, Object]))
+    ;
+        Semantics = wh_question(who, VPSem)
+    ).
+
+% Pattern 2C: "Ai [V] [NP]"
+compose(tree(s_wh, [WH, V, NP]), Semantics) :-
+    WH = tree(wh, [word(ai, wh_word)]), !,
+    compose(V, VSem),
+    compose(NP, NPSem),
+    extract_entity(NPSem, Object),
+    extract_predicate(VSem, Pred),
+    Semantics = wh_question(who, pred(Pred, [_, Object])).
+
+% ============================================
+% LOẠI 3: CÂU HỎI "Ở ĐÂU" (WHERE)
+% Pattern: [Subject] o dau
+% Ví dụ: "Miu o dau", "Ghe go o dau"
+% ============================================
+
+compose(tree(s_wh, [NP, _Prep, WH]), Semantics) :-
+    WH = tree(wh, [word(dau, wh_word)]), !,
+    compose(NP, NPSem),
+    extract_entity(NPSem, Subject),
+    Semantics = wh_question(where, pred(vi_tri, [Subject, _])).
+
+% ============================================
+% LOẠI 4: CÂU HỎI CÓ/KHÔNG (YES/NO)
+% Pattern: [Subject] [Verb] [Object] khong
+% Ví dụ: "Linh thich hoa khong", "Nhan so huu xe dap khong"
+% ============================================
+
+compose(tree(s_yn, [NP, VP, _QM]), Semantics) :- !,
+    compose(NP, NPSem),
+    compose(VP, VPSem),
+    extract_entity(NPSem, Subject),
+    ( VPSem = pred(Pred, [Object]) ->
+        Semantics = pred(Pred, [Subject, Object])
+    ;
+        Semantics = app(NPSem, VPSem)
+    ).
+
+compose(tree(s_yn, [NP, VP]), Semantics) :- !,
+    compose(NP, NPSem),
+    compose(VP, VPSem),
+    extract_entity(NPSem, Subject),
+    ( VPSem = pred(Pred, [Object]) ->
+        Semantics = pred(Pred, [Subject, Object])
+    ; VPSem = lambda(x, pred(Pred, [x])) ->
+        Semantics = pred(Pred, [Subject])
+    ;
+        Semantics = app(NPSem, VPSem)
+    ).
+
+% ============================================
+% CÂU THƯỜNG (DECLARATIVE)
+% Pattern: [Subject] [VP]
+% ============================================
 
 compose(tree(s, [NP, VP]), Semantics) :- !,
     compose(NP, NPSem),
     compose(VP, VPSem),
     Semantics = app(NPSem, VPSem).
 
+% ============================================
+% NOUN PHRASE (NP)
+% ============================================
+
 compose(tree(np, [Det, N]), Semantics) :- !,
     compose(Det, DetSem),
     compose(N, NSem),
     Semantics = app(DetSem, NSem).
 
+compose(tree(np, [Word]), Semantics) :- !,
+    compose(Word, Semantics).
+
+% ============================================
+% VERB PHRASE (VP)
+% ============================================
+
+% VP = Verb + Object: "thich xe_dap"
 compose(tree(vp, [V, NP]), Semantics) :- !,
     compose(V, VSem),
     compose(NP, NPSem),
-    Semantics = app(VSem, NPSem).
+    extract_entity(NPSem, Object),
+    extract_predicate(VSem, Pred),
+    Semantics = pred(Pred, [Object]).
 
+% VP = Verb chỉ (intransitive): "hien", "dep"  
 compose(tree(vp, [V]), Semantics) :- !,
     compose(V, Semantics).
 
+% ============================================
+% TERMINAL NODES
+% ============================================
+
+compose(tree(v, [Word]), Semantics) :- !,
+    compose(Word, Semantics).
+
+compose(tree(wh, [Word]), Semantics) :- !,
+    compose(Word, Semantics).
+
+compose(tree(n, [Word]), Semantics) :- !,
+    compose(Word, Semantics).
+
+compose(tree(det, [Word]), Semantics) :- !,
+    compose(Word, Semantics).
+
+compose(tree(adj, [Word]), Semantics) :- !,
+    compose(Word, Semantics).
+
+% ============================================
+% WORD LOOKUP
+% ============================================
+
 compose(word(Word, Category), Semantics) :-
-    vocabulary:word_semantics(Word, Category, Semantics).
+    vocabulary:word_semantics(Word, Category, Semantics), !.
+
+compose(word(Word, _), const(Word)) :- !.
 
 compose(Terminal, Terminal).
+
+% ============================================
+% HELPER PREDICATES
+% Trích xuất thông tin từ lambda expressions
+% ============================================
+
+% Trích entity từ lambda: λp.p(const(E)) → E
+extract_entity(lambda(p, app(p, const(E))), E) :- !.
+extract_entity(lambda(_, app(_, const(E))), E) :- !.
+extract_entity(const(E), E) :- !.
+extract_entity(E, E).
+
+% Trích predicate từ lambda: λy.λx.pred(P, [x,y]) → P
+extract_predicate(lambda(y, lambda(x, pred(P, [x, y]))), P) :- !.
+extract_predicate(lambda(_, lambda(_, pred(P, _))), P) :- !.
+extract_predicate(lambda(x, pred(P, [x])), P) :- !.
+extract_predicate(pred(P, _), P) :- !.
+extract_predicate(P, P).
 
 % ========================================
 % BETA REDUCTION

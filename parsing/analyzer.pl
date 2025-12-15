@@ -43,7 +43,7 @@ normalize(Word, Normalized) :-
 
 normalize(Word, Word).
 
-% Synonyms
+% Synonyms - Từ đồng nghĩa cũ
 synonym(hien_lanh, hien).
 synonym(tot_bung, hien).
 synonym(dang_yeu, de_thuong).
@@ -51,6 +51,22 @@ synonym(xinh, dep).
 synonym(nho_nhan, nho).
 synonym(to_lon, lon).
 synonym(ko, khong).
+
+% Synonyms - Data mới (Nhân, Linh, Miu)
+synonym(con_meo, miu).
+synonym(meo_con, miu).
+synonym(xe, xe_dap).
+synonym(xe_dap_xanh, xe_dap).
+synonym(bo, bo_nhan).
+synonym(ba, bo_nhan).
+synonym(nha_cua, nha).
+synonym(can_nha, nha).
+synonym(vuon_hoa, vuon).
+synonym(khu_vuon, vuon).
+synonym(em, linh).
+synonym(em_gai, linh).
+synonym(anh, nhan).
+synonym(truong_hoc, truong).
 
 % ========================================
 % MORPHOLOGICAL ANALYSIS

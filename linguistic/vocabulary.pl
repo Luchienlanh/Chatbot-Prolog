@@ -28,29 +28,55 @@ semantic_type(sentence, t).
 % Semantics: λP.P(entity)
 % ========================================
 
-word_semantics(gau, noun_proper, 
-    lambda(p, app(p, const(gau)))).
-
-word_semantics(meo, noun_proper,
-    lambda(p, app(p, const(meo)))).
-
-word_semantics(cho, noun_proper,
-    lambda(p, app(p, const(cho)))).
-
-word_semantics(vit, noun_proper,
-    lambda(p, app(p, const(vit)))).
-
-word_semantics(huy, noun_proper,
-    lambda(p, app(p, const(huy)))).
+% --- Người ---
+word_semantics(nhan, noun_proper, 
+    lambda(p, app(p, const(nhan)))).
 
 word_semantics(linh, noun_proper,
     lambda(p, app(p, const(linh)))).
 
-word_semantics(minh, noun_proper,
-    lambda(p, app(p, const(minh)))).
+word_semantics(bo_nhan, noun_proper,
+    lambda(p, app(p, const(bo_nhan)))).
 
-word_semantics(an, noun_proper,
-    lambda(p, app(p, const(an)))).
+word_semantics(bo, noun_proper,
+    lambda(p, app(p, const(bo_nhan)))).
+
+% --- Động vật ---
+word_semantics(miu, noun_proper,
+    lambda(p, app(p, const(miu)))).
+
+word_semantics(meo, noun_proper,
+    lambda(p, app(p, const(miu)))).  % meo -> miu
+
+% --- Đồ vật ---
+word_semantics(xe_dap, noun_proper,
+    lambda(p, app(p, const(xe_dap)))).
+
+word_semantics(xe, noun_proper,
+    lambda(p, app(p, const(xe_dap)))).
+
+word_semantics(ghe_go, noun_proper,
+    lambda(p, app(p, const(ghe_go)))).
+
+word_semantics(ghe, noun_proper,
+    lambda(p, app(p, const(ghe_go)))).
+
+% --- Địa điểm ---
+word_semantics(nha, noun_proper,
+    lambda(p, app(p, const(nha)))).
+
+word_semantics(vuon, noun_proper,
+    lambda(p, app(p, const(vuon)))).
+
+word_semantics(truong, noun_proper,
+    lambda(p, app(p, const(truong)))).
+
+word_semantics(phong_khach, noun_proper,
+    lambda(p, app(p, const(phong_khach)))).
+
+% --- Thực vật ---
+word_semantics(hoa, noun_proper,
+    lambda(p, app(p, const(hoa)))).
 
 % ========================================
 % COMMON NOUNS - Type: e->t
@@ -94,6 +120,7 @@ word_semantics(nho, verb_intrans,
 % Semantics: λy.λx.relation(x,y)
 % ========================================
 
+% --- Động từ có sẵn ---
 word_semantics(dat, verb_trans,
     lambda(y, lambda(x, pred(walk, [x, y])))).
 
@@ -103,14 +130,45 @@ word_semantics(yeu, verb_trans,
 word_semantics(an, verb_trans,
     lambda(y, lambda(x, pred(eat, [x, y])))).
 
-word_semantics(cho_an, verb_trans,
-    lambda(y, lambda(x, pred(feed, [x, y])))).
-
 word_semantics(thuoc, verb_trans,
     lambda(y, lambda(x, pred(belong, [x, y])))).
 
+% --- Động từ mới cho data Nhân/Linh ---
+word_semantics(cho_an, verb_trans,
+    lambda(y, lambda(x, pred(cho_an, [x, y])))).
+
 word_semantics(thich, verb_trans,
-    lambda(y, lambda(x, pred(like, [x, y])))).
+    lambda(y, lambda(x, pred(thich, [x, y])))).
+
+word_semantics(so_huu, verb_trans,
+    lambda(y, lambda(x, pred(so_huu, [x, y])))).
+
+word_semantics(co, verb_trans,
+    lambda(y, lambda(x, pred(so_huu, [x, y])))).
+
+word_semantics(choi_voi, verb_trans,
+    lambda(y, lambda(x, pred(choi_voi, [x, y])))).
+
+word_semantics(choi, verb_trans,
+    lambda(y, lambda(x, pred(choi_voi, [x, y])))).
+
+word_semantics(song_cung, verb_trans,
+    lambda(y, lambda(x, pred(song_cung, [x, y])))).
+
+word_semantics(song_voi, verb_trans,
+    lambda(y, lambda(x, pred(song_cung, [x, y])))).
+
+word_semantics(ten, verb_trans,
+    lambda(y, lambda(x, pred(ten, [x, y])))).
+
+word_semantics(ngam, verb_trans,
+    lambda(y, lambda(x, pred(ngam, [x, y])))).
+
+word_semantics(tang, verb_trans,
+    lambda(y, lambda(x, pred(tang, [x, y])))).
+
+word_semantics(cho, verb_trans,
+    lambda(y, lambda(x, pred(cho, [x, y])))).
 
 % ========================================
 % ADJECTIVES - Type: (e->t)->(e->t)

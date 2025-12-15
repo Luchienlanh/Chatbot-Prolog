@@ -45,9 +45,24 @@ sentence_yn(tree(s_yn, [NP, VP])) -->
 % "Ai dat Gau?" → S[wh:who]
 % ========================================
 
+% Pattern 1: "Ai [Verb] [Object]" - standard
 sentence_who(tree(s_wh, [WH, VP])) -->
     wh_word_who(WH),
     verb_phrase_trans(VP).
+
+% Pattern 2: "Ai [V1] [V2] [Object]" - compound verb
+% Example: "Ai cho an miu" = "Ai cho_an miu"
+sentence_who(tree(s_wh, [WH, V1Word, V2Word, NP])) -->
+    wh_word_who(WH),
+    [V1Word],
+    [V2Word],
+    noun_phrase(NP),
+    { 
+        % Check if V1 + V2 forms a valid compound verb
+        atom_concat(V1Word, '_', Temp),
+        atom_concat(Temp, V2Word, CompoundVerb),
+        vocabulary:word_semantics(CompoundVerb, verb_trans, _)
+    }.
 
 sentence_who(tree(s_wh, [WH, VP])) -->
     wh_word_who(WH),

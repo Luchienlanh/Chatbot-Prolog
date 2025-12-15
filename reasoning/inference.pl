@@ -16,19 +16,33 @@
 % Format: rule(Conclusion, [Premise1, Premise2, ...])
 % ========================================
 
-% If X walks Y, then X loves Y
-rule(pred(love, [X, Y]), [pred(walk, [X, Y])]).
+% --- Rules cho data mới (Nhân, Linh, Miu) ---
 
-% If X feeds Y, then X loves Y  
-rule(pred(love, [X, Y]), [pred(feed, [X, Y])]).
+% Nếu X cho_an Y thì X chăm sóc Y
+rule(pred(cham_soc, [X, Y]), [pred(cho_an, [X, Y])]).
 
-% If X loves Y and Y is animal, then X is animal lover
-rule(pred(animal_lover, [X]), 
-     [pred(love, [X, Y]), pred(animal, [Y])]).
+% Nếu X choi_voi Y thì X thích Y
+rule(pred(thich, [X, Y]), [pred(choi_voi, [X, Y])]).
 
-% If X is gentle and cute, then X is lovable
-rule(pred(lovable, [X]),
-     [pred(gentle, [X]), pred(cute, [X])]).
+% Nếu X so_huu Y thì Y thuộc về X
+rule(pred(thuoc_ve, [Y, X]), [pred(so_huu, [X, Y])]).
+
+% Nếu X song_cung Y thì X là gia đình của Y
+rule(pred(gia_dinh, [X, Y]), [pred(song_cung, [X, Y])]).
+
+% Nếu X ngam Y và Y ở vườn thì X thích vườn
+rule(pred(thich, [X, vuon]), [pred(ngam, [X, Y]), pred(chua, [vuon, Y])]).
+
+% Nếu X tang Y Z thì Y so_huu Z
+rule(pred(so_huu, [Y, Z]), [pred(tang, [X, Y, Z])]).
+
+% --- Rules tổng quát ---
+
+% Nếu X cho_an Y thì X yêu Y
+rule(pred(yeu, [X, Y]), [pred(cho_an, [X, Y])]).
+
+% Nếu X thich Y thì X quan tâm Y
+rule(pred(quan_tam, [X, Y]), [pred(thich, [X, Y])]).
 
 % ========================================
 % FORWARD CHAINING

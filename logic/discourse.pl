@@ -42,17 +42,14 @@ build_drs(impl(A, B), drs([], [impl(DRS1, DRS2)])) :- !,
     build_drs(A, DRS1),
     build_drs(B, DRS2).
 
-% WH-question: who
-build_drs(wh_question(who, Body), drs([X], Conds)) :- !,
-    extract_wh_conditions(Body, X, person, Conds).
+% WH-question: who - trả về câu hỏi để find_entities xử lý
+build_drs(wh_question(who, pred(P, Args)), wh_question(who, pred(P, Args))) :- !.
 
-% WH-question: what
-build_drs(wh_question(what, Body), drs([X], Conds)) :- !,
-    extract_wh_conditions(Body, X, thing, Conds).
+% WH-question: what - trả về câu hỏi để find_values xử lý  
+build_drs(wh_question(what, pred(P, Args)), wh_question(what, pred(P, Args))) :- !.
 
-% WH-question: where
-build_drs(wh_question(where, Body), drs([X], Conds)) :- !,
-    extract_wh_conditions(Body, X, location, Conds).
+% WH-question: where - trả về câu hỏi để find_values xử lý
+build_drs(wh_question(where, pred(P, Args)), wh_question(where, pred(P, Args))) :- !.
 
 % Application (after beta reduction)
 build_drs(app(F, A), DRS) :-

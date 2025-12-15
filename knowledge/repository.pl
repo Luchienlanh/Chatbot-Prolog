@@ -15,102 +15,171 @@
 :- dynamic entity/2.
 
 % ========================================
-% ENTITIES - C�c thực thể
+% ENTITIES
 % Format: entity(Name, Type)
 % ========================================
 
-% Animals
-entity(gau, animal).
-entity(meo, animal).
-entity(cho, animal).
-entity(vit, animal).
-
-% People
-entity(huy, person).
+% People - Người
+entity(nhan, person).
 entity(linh, person).
-entity(minh, person).
-entity(an, person).
+entity(bo_nhan, person).
+
+% Animals - Động vật
+entity(miu, animal).
+
+% Objects - Đồ vật
+entity(xe_dap, object).
+entity(ghe_go, object).
+
+% Places - Địa điểm
+entity(nha, place).
+entity(phong_khach, place).
+entity(vuon, place).
+entity(truong, place).
+
+% Plants - Thực vật
+entity(hoa, plant).
 
 % ========================================
 % FACTS - Các sự thật
 % Format: fact(pred(Predicate, [Arguments]))
 % ========================================
 
-% Properties
-fact(pred(gentle, [gau])).
-fact(pred(cute, [gau])).
-fact(pred(cute, [meo])).
-fact(pred(small, [meo])).
-fact(pred(big, [cho])).
+% --- Quan hệ gia đình ---
+% em_gai(Person1, Person2): Person2 là em gái của Person1
+fact(pred(em_gai, [nhan, linh])).
 
-% Relations: walk(Person, Animal)
-fact(pred(walk, [huy, gau])).
-fact(pred(walk, [linh, cho])).
-fact(pred(walk, [minh, meo])).
+% --- Nơi ở ---
+% song_tai(Person, Place): Person sống tại Place
+fact(pred(song_tai, [nhan, nha])).
+fact(pred(song_tai, [linh, nha])).
 
-% Relations: love(Person, Animal)
-fact(pred(love, [huy, gau])).
-fact(pred(love, [linh, meo])).
-fact(pred(love, [minh, cho])).
-fact(pred(love, [an, meo])).
+% song_cung(Person1, Person2): Person1 sống cùng Person2
+fact(pred(song_cung, [nhan, linh])).
 
-% Relations: eat(Animal, Food)
-fact(pred(eat, [meo, ca])).
-fact(pred(eat, [cho, thit])).
-fact(pred(eat, [gau, mat_ong])).
-fact(pred(eat, [vit, com])).
+% --- Thuộc tính địa điểm ---
+% thuoc_tinh(Place, Property)
+fact(pred(nho, [nha])).
+fact(pred(ngoai_o, [nha])).
 
-% Relations: belong(Animal, Person)
-fact(pred(belong, [gau, huy])).
-fact(pred(belong, [meo, linh])).
-fact(pred(belong, [cho, minh])).
+% --- Sở hữu ---
+% so_huu(Owner, Object): Owner sở hữu Object
+fact(pred(so_huu, [nhan, xe_dap])).
+fact(pred(so_huu, [linh, miu])).
 
-% Properties: color(Animal, Part, Color)
-fact(pred(color, [gau, fur, brown])).
-fact(pred(color, [meo, fur, white])).
-fact(pred(color, [cho, fur, black])).
+% --- Thuộc tính đồ vật ---
+% mau_sac(Object, Color)
+fact(pred(mau_sac, [xe_dap, xanh])).
+
+% --- Quan hệ tặng ---
+% tang(Giver, Receiver, Gift): Giver tặng Gift cho Receiver
+fact(pred(tang, [bo_nhan, nhan, xe_dap])).
+
+% qua_tang(Object): Object là món quà
+fact(pred(qua_tang, [xe_dap])).
+
+% --- Hành động ---
+% cho(Person1, Person2, Destination): Person1 chở Person2 đến Destination
+fact(pred(cho, [nhan, linh, truong])).
+
+% dung_de(Object, Purpose): Object được dùng để Purpose
+fact(pred(dung_de, [xe_dap, cho_linh_den_truong])).
+
+% --- Cảm xúc/Sở thích ---
+% thich(Person, Object/Thing)
+fact(pred(thich, [linh, xe_dap])).
+fact(pred(thich, [linh, hoa])).
+
+% ly_do_thich(Person, Object, Reason)
+fact(pred(ly_do_thich, [linh, xe_dap, cho_em])).
+
+% --- Động vật và hành vi ---
+% ten(Animal, Name)
+fact(pred(ten, [miu, miu])).
+fact(pred(la_meo, [miu])).
+
+% nam_ngu(Animal, Location)
+fact(pred(nam_ngu, [miu, ghe_go])).
+
+% vi_tri(Object, Location)
+fact(pred(vi_tri, [ghe_go, phong_khach])).
+
+% --- Chăm sóc ---
+% cho_an(Person, Animal)
+fact(pred(cho_an, [nhan, miu])).
+
+% choi_voi(Person, Animal)
+fact(pred(choi_voi, [nhan, miu])).
+
+% --- Vườn ---
+% vi_tri_tuong_doi(Place1, Relation, Place2)
+fact(pred(phia_sau, [vuon, nha])).
+
+% chua(Place, Thing)
+fact(pred(chua, [vuon, hoa])).
+
+% ngam(Person, Object)
+fact(pred(ngam, [linh, hoa])).
+fact(pred(noi_ngam, [linh, hoa, vuon])).
 
 % ========================================
 % HƯỚNG DẪN THAY ĐỔI DATA
 % ========================================
 
 /*
-TO ADD NEW DATA:
+HƯỚNG DẪN THÊM DATA MỚI:
 
-1. ADD ENTITY:
+1. THÊM ENTITY:
    entity(ten_entity, loai).
+   
+   Loại entity: person, animal, object, place, plant
+   
+   Ví dụ:
+   entity(an, person).
+   entity(cho, animal).
+   entity(ban, object).
 
-   Example:
-   entity(rua, animal).
-   entity(nam, person).
-
-2. ADD FACT:
+2. THÊM FACT:
    fact(pred(predicate, [arg1, arg2, ...])).
 
-   Example:
-   fact(pred(gentle, [rua])).
-   fact(pred(walk, [nam, rua])).
-   fact(pred(eat, [rua, rau])).
+   Ví dụ:
+   fact(pred(so_huu, [an, cho])).
+   fact(pred(thich, [an, cho])).
 
 3. RESTART SYSTEM:
-   Just restart Prolog or reload:
+   Khởi động lại Prolog hoặc reload:
    ?- make.
 
-PREDICATE TYPES:
-- Properties (1 arg): gentle, cute, small, big
-- Relations (2 args): walk, love, eat, belong
-- Complex (3 args): color(Animal, Part, Color)
+DANH SÁCH PREDICATE HIỆN CÓ:
 
-EXAMPLES:
+- Quan hệ gia đình (2 args): em_gai(Person1, Person2)
+- Nơi ở (2 args): song_tai(Person, Place), song_cung(Person1, Person2)
+- Thuộc tính (1 arg): nho, ngoai_o, la_meo, qua_tang
+- Sở hữu (2 args): so_huu(Owner, Object)
+- Màu sắc (2 args): mau_sac(Object, Color)
+- Tặng (3 args): tang(Giver, Receiver, Gift)
+- Hành động (3 args): cho(Person1, Person2, Destination)
+- Mục đích (2 args): dung_de(Object, Purpose)
+- Cảm xúc (2 args): thich(Person, Thing)
+- Lý do (3 args): ly_do_thich(Person, Object, Reason)
+- Động vật (2 args): ten(Animal, Name), nam_ngu(Animal, Location)
+- Vị trí (2 args): vi_tri(Object, Location), phia_sau(Place1, Place2)
+- Chăm sóc (2 args): cho_an(Person, Animal), choi_voi(Person, Animal)
+- Chứa (2 args): chua(Place, Thing), ngam(Person, Object)
+- Phức tạp (3 args): noi_ngam(Person, Object, Place)
+
+VÍ DỤ MỞ RỘNG:
 */
 
-% Example 1: Add a turtle
-% entity(rua, animal).
-% fact(pred(slow, [rua])).
-% fact(pred(walk, [nam, rua])).
+% Ví dụ 1: Thêm bạn của Nhân
+% entity(an, person).
+% fact(pred(ban_cua, [nhan, an])).
+% fact(pred(song_tai, [an, nha_an])).
 
-% Example 2: Add feeding relation
-% fact(pred(feed, [huy, gau])).
+% Ví dụ 2: Thêm một con vật mới
+% entity(cho, animal).
+% fact(pred(so_huu, [an, cho])).
+% fact(pred(cho_an, [an, cho])).
 
 % ========================================
 % DYNAMIC OPERATIONS

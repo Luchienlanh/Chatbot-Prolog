@@ -12,11 +12,18 @@
 % ========================================
 
 start_repl :-
-    writeln('Interactive mode. Type your question or "exit" to quit.'),
-    writeln('Examples:'),
-    writeln('  > Gau hien khong'),
-    writeln('  > Ai dat Gau'),
-    writeln('  > Meo an gi'),
+    writeln('Chế độ tương tác. Gõ "exit" để thoát.'),
+    writeln(''),
+    writeln('Các loại câu hỏi hỗ trợ:'),
+    writeln('  [what] Subject + Verb + gi    : Linh thich gi'),
+    writeln('  [who]  Ai + Verb + Object     : Ai cho an Miu'),
+    writeln('  [yn]   S + V + O + khong      : Linh thich hoa khong'),
+    writeln(''),
+    writeln('Ví dụ với data hiện tại:'),
+    writeln('  > Meo ten gi'),
+    writeln('  > Ai so huu xe dap'),
+    writeln('  > Nhan song cung ai'),
+    writeln('  > Linh ngam gi'),
     nl,
     repl_loop.
 
