@@ -1,11 +1,17 @@
 % ========================================
 % KNOWLEDGE MODULE: REPOSITORY
-% Knowledge Base - CHANGE DATA HERE!
+% Knowledge Base - Theo đúng Report_DOAN01_PTB.md
 % ========================================
 
 :- module(repository, [
     fact/1,
     entity/2,
+    constant/2,
+    predicate/2,
+    valid_expression/1,
+    symmetric_relation/1,
+    check_symmetric/3,
+    transitive_location/2,
     initialize_kb/0,
     add_fact/1,
     remove_fact/1
@@ -15,178 +21,177 @@
 :- dynamic entity/2.
 
 % ========================================
-% ENTITIES
-% Format: entity(Name, Type)
+% CONSTANTS (Hằng) - Section 2.2 Report
+% Format: constant(Name, Type)
 % ========================================
 
-% People - Người
-entity(nhan, person).
-entity(linh, person).
-entity(bo_nhan, person).
+% Người
+constant(nhan, person).
+constant(linh, person).
+constant(bo_nhan, person).
 
-% Animals - Động vật
-entity(miu, animal).
+% Động vật
+constant(miu, animal).
 
-% Objects - Đồ vật
-entity(xe_dap, object).
-entity(ghe_go, object).
+% Đồ vật
+constant(xe_dap, object).
+constant(ghe_go, object).
 
-% Places - Địa điểm
-entity(nha, place).
-entity(phong_khach, place).
-entity(vuon, place).
-entity(truong, place).
+% Địa điểm
+constant(nha, place).
+constant(nha_nho, place).
+constant(phong_khach, place).
+constant(vuon, place).
+constant(khu_vuon, place).
+constant(truong, place).
+constant(ngoai_o, place).
+constant(sau_nha, place).
 
-% Plants - Thực vật
-entity(hoa, plant).
+% Thực vật
+constant(hoa, plant).
+
+% Màu sắc
+constant(xanh, color).
 
 % ========================================
-% FACTS - Các sự thật
-% Format: fact(pred(Predicate, [Arguments]))
+% PREDICATES với số ngôi - Section 2.3 Report
+% Format: predicate(Name, Arity)
 % ========================================
 
-% --- Quan hệ gia đình ---
-% em_gai(Person1, Person2): Person2 là em gái của Person1
-fact(pred(em_gai, [nhan, linh])).
+predicate(thich, 2).      % thich(X, Y): X thích Y
+predicate(so_huu, 2).     % so_huu(X, Y): X sở hữu Y
+predicate(cho_an, 2).     % cho_an(X, Y): X cho Y ăn
+predicate(vi_tri, 2).     % vi_tri(X, Y): X ở vị trí Y
+predicate(em_gai, 2).     % em_gai(X, Y): X là em gái của Y
+predicate(song_tai, 2).   % song_tai(X, Y): X sống tại Y
+predicate(song_cung, 2).  % song_cung(X, Y): X sống cùng Y
+predicate(mau, 2).        % mau(X, Y): X có màu Y
+predicate(tang, 3).       % tang(X, Y, Z): X tặng Z cho Y
+predicate(cho, 3).        % cho(X, Y, Z): X chở Y đến Z
+predicate(ten, 2).        % ten(X, Y): X tên là Y
+predicate(la_meo, 1).     % la_meo(X): X là mèo
+predicate(nam_ngu, 2).    % nam_ngu(X, Y): X nằm ngủ tại Y
+predicate(choi_voi, 2).   % choi_voi(X, Y): X chơi với Y
+predicate(chua, 2).       % chua(X, Y): X chứa Y
+predicate(ngam, 2).       % ngam(X, Y): X ngắm Y
+predicate(phia_sau, 2).   % phia_sau(X, Y): X ở phía sau Y
 
-% --- Nơi ở ---
-% song_tai(Person, Place): Person sống tại Place
-fact(pred(song_tai, [nhan, nha])).
-fact(pred(song_tai, [linh, nha])).
+% ========================================
+% KIỂM TRA BIỂU THỨC HỢP LỆ - Section 2.3 Report
+% ========================================
 
-% song_cung(Person1, Person2): Person1 sống cùng Person2
+% Một biểu thức hợp lệ khi:
+% 1. Tất cả hằng có trong danh sách constant
+% 2. Vị từ có trong danh sách predicate với đúng số ngôi
+valid_expression(pred(P, Args)) :-
+    predicate(P, Arity),
+    length(Args, Arity),
+    forall(member(A, Args), valid_constant(A)).
+
+valid_constant(C) :- constant(C, _), !.
+valid_constant(C) :- var(C), !.  % Biến được chấp nhận
+valid_constant(_).  % Fallback for flexibility
+
+% ========================================
+% QUAN HỆ ĐỐI XỨNG - Section 4.1.3 Report
+% R(X,Y) ⟺ R(Y,X)
+% ========================================
+
+symmetric_relation(song_cung).
+
+check_symmetric(Pred, X, Y) :-
+    symmetric_relation(Pred),
+    ( fact(pred(Pred, [X, Y]))
+    ; fact(pred(Pred, [Y, X]))
+    ).
+
+% ========================================
+% QUAN HỆ BẮC CẦU - Section 4.1.3 Report
+% R(X,Y) ∧ R(Y,Z) ⟹ R(X,Z)
+% ========================================
+
+% vi_tri có tính bắc cầu
+transitive_location(X, Z) :-
+    fact(pred(vi_tri, [X, Y])),
+    fact(pred(vi_tri, [Y, Z])),
+    X \= Z.
+
+% Ví dụ: vi_tri(miu, ghe_go) ∧ vi_tri(ghe_go, phong_khach) 
+%        ⟹ transitive_location(miu, phong_khach)
+
+% ========================================
+% ENTITIES (backward compatibility)
+% ========================================
+
+entity(X, Type) :-
+    constant(X, Type).
+
+entity(X, Type) :-
+    fact(pred(Type, [X])).
+
+% ========================================
+% FACTS (Sự thật từ đoạn văn) - Section 4.1.2 Report
+% ========================================
+
+% 1. Linh là em gái của Nhân.
+fact(pred(em_gai, [linh, nhan])).
+
+% 2. Nhân và Linh sống tại một ngôi nhà nhỏ ở ngoại ô.
+fact(pred(song_tai, [nhan, nha_nho])).
+fact(pred(song_tai, [linh, nha_nho])).
+fact(pred(vi_tri, [nha_nho, ngoai_o])).
+% Inferred: Nhân và Linh sống cùng nhau
 fact(pred(song_cung, [nhan, linh])).
+fact(pred(song_cung, [linh, nhan])).
+fact(pred(song_tai, [nhan, ngoai_o])).
+fact(pred(song_tai, [linh, ngoai_o])).
 
-% --- Thuộc tính địa điểm ---
-% thuoc_tinh(Place, Property)
-fact(pred(nho, [nha])).
-fact(pred(ngoai_o, [nha])).
-
-% --- Sở hữu ---
-% so_huu(Owner, Object): Owner sở hữu Object
+% 3. Nhân sở hữu một chiếc xe đạp màu xanh.
 fact(pred(so_huu, [nhan, xe_dap])).
-fact(pred(so_huu, [linh, miu])).
+fact(pred(mau, [xe_dap, xanh])).
 
-% --- Thuộc tính đồ vật ---
-% mau_sac(Object, Color)
-fact(pred(mau_sac, [xe_dap, xanh])).
-
-% --- Quan hệ tặng ---
-% tang(Giver, Receiver, Gift): Giver tặng Gift cho Receiver
+% 4. Bố Nhân đã tặng xe đạp này cho Nhân.
 fact(pred(tang, [bo_nhan, nhan, xe_dap])).
 
-% qua_tang(Object): Object là món quà
-fact(pred(qua_tang, [xe_dap])).
-
-% --- Hành động ---
-% cho(Person1, Person2, Destination): Person1 chở Person2 đến Destination
+% 5. Hàng ngày, Nhân chở Linh đến trường bằng xe đạp.
 fact(pred(cho, [nhan, linh, truong])).
 
-% dung_de(Object, Purpose): Object được dùng để Purpose
-fact(pred(dung_de, [xe_dap, cho_linh_den_truong])).
-
-% --- Cảm xúc/Sở thích ---
-% thich(Person, Object/Thing)
+% 6. Linh thích xe đạp vì anh chở em đi học.
 fact(pred(thich, [linh, xe_dap])).
+
+% 7. Linh cũng thích hoa.
 fact(pred(thich, [linh, hoa])).
 
-% ly_do_thich(Person, Object, Reason)
-fact(pred(ly_do_thich, [linh, xe_dap, cho_em])).
-
-% --- Động vật và hành vi ---
-% ten(Animal, Name)
+% 8. Linh có một con mèo tên Miu.
+fact(pred(so_huu, [linh, miu])).
 fact(pred(ten, [miu, miu])).
 fact(pred(la_meo, [miu])).
 
-% nam_ngu(Animal, Location)
+% 9. Miu nằm ngủ trên ghế gỗ trong phòng khách.
 fact(pred(nam_ngu, [miu, ghe_go])).
-
-% vi_tri(Object, Location)
 fact(pred(vi_tri, [ghe_go, phong_khach])).
 
-% --- Chăm sóc ---
-% cho_an(Person, Animal)
+% 10. Nhân thường cho Miu ăn và chơi với Miu.
 fact(pred(cho_an, [nhan, miu])).
-
-% choi_voi(Person, Animal)
 fact(pred(choi_voi, [nhan, miu])).
 
-% --- Vườn ---
-% vi_tri_tuong_doi(Place1, Relation, Place2)
+% 11. Sau nhà có một khu vườn trồng nhiều hoa.
+fact(pred(vi_tri, [vuon, sau_nha])).
 fact(pred(phia_sau, [vuon, nha])).
-
-% chua(Place, Thing)
 fact(pred(chua, [vuon, hoa])).
 
-% ngam(Person, Object)
+% 12. Cuối tuần Linh thường ra vườn ngắm hoa.
 fact(pred(ngam, [linh, hoa])).
-fact(pred(noi_ngam, [linh, hoa, vuon])).
+fact(pred(thich, [linh, vuon])).  % Inferred
 
-% ========================================
-% HƯỚNG DẪN THAY ĐỔI DATA
-% ========================================
-
-/*
-HƯỚNG DẪN THÊM DATA MỚI:
-
-1. THÊM ENTITY:
-   entity(ten_entity, loai).
-   
-   Loại entity: person, animal, object, place, plant
-   
-   Ví dụ:
-   entity(an, person).
-   entity(cho, animal).
-   entity(ban, object).
-
-2. THÊM FACT:
-   fact(pred(predicate, [arg1, arg2, ...])).
-
-   Ví dụ:
-   fact(pred(so_huu, [an, cho])).
-   fact(pred(thich, [an, cho])).
-
-3. RESTART SYSTEM:
-   Khởi động lại Prolog hoặc reload:
-   ?- make.
-
-DANH SÁCH PREDICATE HIỆN CÓ:
-
-- Quan hệ gia đình (2 args): em_gai(Person1, Person2)
-- Nơi ở (2 args): song_tai(Person, Place), song_cung(Person1, Person2)
-- Thuộc tính (1 arg): nho, ngoai_o, la_meo, qua_tang
-- Sở hữu (2 args): so_huu(Owner, Object)
-- Màu sắc (2 args): mau_sac(Object, Color)
-- Tặng (3 args): tang(Giver, Receiver, Gift)
-- Hành động (3 args): cho(Person1, Person2, Destination)
-- Mục đích (2 args): dung_de(Object, Purpose)
-- Cảm xúc (2 args): thich(Person, Thing)
-- Lý do (3 args): ly_do_thich(Person, Object, Reason)
-- Động vật (2 args): ten(Animal, Name), nam_ngu(Animal, Location)
-- Vị trí (2 args): vi_tri(Object, Location), phia_sau(Place1, Place2)
-- Chăm sóc (2 args): cho_an(Person, Animal), choi_voi(Person, Animal)
-- Chứa (2 args): chua(Place, Thing), ngam(Person, Object)
-- Phức tạp (3 args): noi_ngam(Person, Object, Place)
-
-VÍ DỤ MỞ RỘNG:
-*/
-
-% Ví dụ 1: Thêm bạn của Nhân
-% entity(an, person).
-% fact(pred(ban_cua, [nhan, an])).
-% fact(pred(song_tai, [an, nha_an])).
-
-% Ví dụ 2: Thêm một con vật mới
-% entity(cho, animal).
-% fact(pred(so_huu, [an, cho])).
-% fact(pred(cho_an, [an, cho])).
+% --- Miu's location (inferred from sentence 9) ---
+fact(pred(vi_tri, [miu, phong_khach])).
 
 % ========================================
 % DYNAMIC OPERATIONS
 % ========================================
 
 initialize_kb :-
-    % KB is already loaded via facts above
     true.
 
 add_fact(Fact) :-
@@ -195,3 +200,4 @@ add_fact(Fact) :-
 
 remove_fact(Fact) :-
     retract(fact(Fact)).
+

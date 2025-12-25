@@ -1,59 +1,90 @@
 % ========================================
 % LOGIC MODULE: FIRST-ORDER
-% First-Order Logic Conversion & Operations
+% Chuyển đổi DRS sang FOL - THEO SLIDES MÔN HỌC
+% ========================================
+%
+% Theo Slide-DOAN-01 và Slide-BUOI-10:
+%
+% CHUYỂN ĐỔI DRS → FOL:
+%
+% 1. drs([], Conds) → convert_conditions(Conds)
+% 2. drs([X|Refs], Conds) → ∃X. convert(drs(Refs, Conds))
+% 3. pred(P, Args) → P(Args)
+% 4. neg(DRS) → ¬convert(DRS)
+% 5. impl(A, B) → convert(A) → convert(B)
+% 6. conj(A, B) → convert(A) ∧ convert(B)
+%
 % ========================================
 
 :- module(firstorder, [
     convert/2,
     simplify/2,
     to_cnf/2,
-    negate/2
+    negate/2,
+    skolemize/2
 ]).
 
 % ========================================
-% DRS TO FOL CONVERSION
+% CHUYỂN ĐỔI DRS → FOL
 % ========================================
 
-% WH-questions: pass through unchanged - theorem.pl sẽ xử lý
+% WH-questions: giữ nguyên để theorem prover xử lý
 convert(wh_question(Type, Body), wh_question(Type, Body)) :- !.
 
-% Empty DRS → true
+% DRS rỗng → true
 convert(drs([], []), true) :- !.
 
-% DRS with no referents, single condition
+% DRS không có sở chỉ, một điều kiện
 convert(drs([], [Cond]), FOL) :- !,
     convert_condition(Cond, FOL).
 
-% DRS with no referents, multiple conditions
+% DRS không có sở chỉ, nhiều điều kiện
+% → C1 ∧ C2 ∧ ... ∧ Cn
 convert(drs([], Conds), FOL) :- !,
     convert_conditions(Conds, FOL).
 
-% DRS with referents → existential quantification
+% DRS có sở chỉ → ∃X. convert(rest)
+% drs([X|Refs], Conds) → ∃X. convert(drs(Refs, Conds))
 convert(drs([Ref|Refs], Conds), exists(Ref, RestFOL)) :- !,
     convert(drs(Refs, Conds), RestFOL).
 
+% Fallback cho các trường hợp khác
+convert(X, X).
+
 % ========================================
-% CONDITION CONVERSION
+% CHUYỂN ĐỔI ĐIỀU KIỆN
 % ========================================
 
+% pred(P, Args) → pred(P, Args)
 convert_condition(pred(P, Args), pred(P, Args)) :- !.
 
+% type(X, T) → T(X)
 convert_condition(type(X, T), pred(T, [X])) :- !.
 
+% neg(DRS) → ¬convert(DRS)
 convert_condition(neg(DRS), neg(FOL)) :- !,
     convert(DRS, FOL).
 
+% impl(A, B) → convert(A) → convert(B)
 convert_condition(impl(DRS1, DRS2), impl(FOL1, FOL2)) :- !,
     convert(DRS1, FOL1),
     convert(DRS2, FOL2).
 
+% conj(A, B)
+convert_condition(conj(A, B), and(FOLA, FOLB)) :- !,
+    convert_condition(A, FOLA),
+    convert_condition(B, FOLB).
+
+% DRS lồng nhau
 convert_condition(drs(Refs, Conds), FOL) :- !,
     convert(drs(Refs, Conds), FOL).
 
+% Fallback
 convert_condition(Cond, Cond).
 
 % ========================================
-% MULTIPLE CONDITIONS
+% CHUYỂN ĐỔI NHIỀU ĐIỀU KIỆN
+% [C1, C2, ...] → C1 ∧ C2 ∧ ...
 % ========================================
 
 convert_conditions([], true) :- !.
@@ -66,36 +97,36 @@ convert_conditions([Cond|Conds], and(FOL, RestFOL)) :-
     convert_conditions(Conds, RestFOL).
 
 % ========================================
-% FOL SIMPLIFICATION
+% ĐƠN GIẢN HÓA FOL
 % ========================================
 
-% true and X → X
+% true ∧ X → X
 simplify(and(true, X), Result) :- !,
     simplify(X, Result).
 
 simplify(and(X, true), Result) :- !,
     simplify(X, Result).
 
-% false and X → false
+% false ∧ X → false
 simplify(and(false, _), false) :- !.
 simplify(and(_, false), false) :- !.
 
-% true or X → true
+% true ∨ X → true
 simplify(or(true, _), true) :- !.
 simplify(or(_, true), true) :- !.
 
-% false or X → X
+% false ∨ X → X
 simplify(or(false, X), Result) :- !,
     simplify(X, Result).
 
 simplify(or(X, false), Result) :- !,
     simplify(X, Result).
 
-% not(not(X)) → X
+% ¬¬X → X
 simplify(neg(neg(X)), Result) :- !,
     simplify(X, Result).
 
-% Recursive simplification
+% Đệ quy
 simplify(and(X, Y), and(SX, SY)) :- !,
     simplify(X, SX),
     simplify(Y, SY).
@@ -120,26 +151,31 @@ simplify(forall(Var, Body), forall(Var, SBody)) :- !,
 simplify(X, X).
 
 % ========================================
-% NEGATION
-% Apply De Morgan's laws
+% PHỦ ĐỊNH (De Morgan's Laws)
 % ========================================
 
+% ¬(A ∧ B) → ¬A ∨ ¬B
 negate(and(X, Y), or(NX, NY)) :- !,
     negate(X, NX),
     negate(Y, NY).
 
+% ¬(A ∨ B) → ¬A ∧ ¬B
 negate(or(X, Y), and(NX, NY)) :- !,
     negate(X, NX),
     negate(Y, NY).
 
+% ¬¬X → X
 negate(neg(X), X) :- !.
 
+% ¬∃X. P → ∀X. ¬P
 negate(exists(Var, Body), forall(Var, NBody)) :- !,
     negate(Body, NBody).
 
+% ¬∀X. P → ∃X. ¬P
 negate(forall(Var, Body), exists(Var, NBody)) :- !,
     negate(Body, NBody).
 
+% ¬(A → B) → A ∧ ¬B
 negate(impl(X, Y), and(X, NY)) :- !,
     negate(Y, NY).
 
@@ -149,7 +185,7 @@ negate(false, true) :- !.
 negate(X, neg(X)).
 
 % ========================================
-% CONJUNCTIVE NORMAL FORM (CNF)
+% CHUYỂN ĐỔI SANG CNF (Conjunctive Normal Form)
 % ========================================
 
 to_cnf(Formula, CNF) :-
@@ -157,7 +193,7 @@ to_cnf(Formula, CNF) :-
     move_negations_inward(NoImpl, NNF),
     distribute_or_over_and(NNF, CNF).
 
-% Eliminate implications: A → B ≡ ¬A ∨ B
+% Loại bỏ implications: A → B ≡ ¬A ∨ B
 eliminate_implications(impl(A, B), or(NA, NB)) :- !,
     eliminate_implications(A, NA1),
     negate(NA1, NA),
@@ -182,7 +218,7 @@ eliminate_implications(forall(V, B), forall(V, NB)) :- !,
 
 eliminate_implications(X, X).
 
-% Move negations inward (Negation Normal Form)
+% Đưa phủ định vào trong (NNF)
 move_negations_inward(neg(and(A, B)), or(NA, NB)) :- !,
     move_negations_inward(neg(A), NA),
     move_negations_inward(neg(B), NB).
@@ -216,7 +252,7 @@ move_negations_inward(forall(V, B), forall(V, NB)) :- !,
 
 move_negations_inward(X, X).
 
-% Distribute OR over AND: (A ∧ B) ∨ C ≡ (A ∨ C) ∧ (B ∨ C)
+% Phân phối OR qua AND: (A ∧ B) ∨ C ≡ (A ∨ C) ∧ (B ∨ C)
 distribute_or_over_and(or(and(A, B), C), and(AC, BC)) :- !,
     distribute_or_over_and(or(A, C), AC),
     distribute_or_over_and(or(B, C), BC).
@@ -229,15 +265,20 @@ distribute_or_over_and(and(A, B), and(NA, NB)) :- !,
     distribute_or_over_and(A, NA),
     distribute_or_over_and(B, NB).
 
-distribute_or_over_and(or(A, B), or(NA, NB)) :- !,
+distribute_or_over_and(or(A, B), Result) :- !,
     distribute_or_over_and(A, NA),
-    distribute_or_over_and(B, NB).
+    distribute_or_over_and(B, NB),
+    ( (NA = and(_, _) ; NB = and(_, _)) ->
+        distribute_or_over_and(or(NA, NB), Result)
+    ;
+        Result = or(NA, NB)
+    ).
 
 distribute_or_over_and(X, X).
 
 % ========================================
 % SKOLEMIZATION
-% Eliminate existential quantifiers
+% Loại bỏ lượng từ tồn tại
 % ========================================
 
 skolemize(exists(Var, Body), Skolemized) :- !,
@@ -256,8 +297,12 @@ skolemize(or(A, B), or(SA, SB)) :- !,
     skolemize(A, SA),
     skolemize(B, SB).
 
+skolemize(neg(A), neg(SA)) :- !,
+    skolemize(A, SA).
+
 skolemize(X, X).
 
+% Thay thế biến
 substitute_var(Var, Value, Var, Value) :- !.
 
 substitute_var(Var, Value, and(A, B), and(NA, NB)) :- !,
@@ -268,8 +313,23 @@ substitute_var(Var, Value, or(A, B), or(NA, NB)) :- !,
     substitute_var(Var, Value, A, NA),
     substitute_var(Var, Value, B, NB).
 
+substitute_var(Var, Value, neg(A), neg(NA)) :- !,
+    substitute_var(Var, Value, A, NA).
+
 substitute_var(Var, Value, pred(P, Args), pred(P, NewArgs)) :- !,
     maplist(substitute_in_arg(Var, Value), Args, NewArgs).
+
+substitute_var(Var, Value, forall(V, Body), forall(V, NewBody)) :-
+    V \= Var, !,
+    substitute_var(Var, Value, Body, NewBody).
+
+substitute_var(Var, _, forall(Var, Body), forall(Var, Body)) :- !.
+
+substitute_var(Var, Value, exists(V, Body), exists(V, NewBody)) :-
+    V \= Var, !,
+    substitute_var(Var, Value, Body, NewBody).
+
+substitute_var(Var, _, exists(Var, Body), exists(Var, Body)) :- !.
 
 substitute_var(_, _, X, X).
 

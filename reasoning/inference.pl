@@ -34,7 +34,7 @@ rule(pred(gia_dinh, [X, Y]), [pred(song_cung, [X, Y])]).
 rule(pred(thich, [X, vuon]), [pred(ngam, [X, Y]), pred(chua, [vuon, Y])]).
 
 % Nếu X tang Y Z thì Y so_huu Z
-rule(pred(so_huu, [Y, Z]), [pred(tang, [X, Y, Z])]).
+rule(pred(so_huu, [Y, Z]), [pred(tang, [_X, Y, Z])]).
 
 % --- Rules tổng quát ---
 
@@ -44,6 +44,46 @@ rule(pred(yeu, [X, Y]), [pred(cho_an, [X, Y])]).
 % Nếu X thich Y thì X quan tâm Y
 rule(pred(quan_tam, [X, Y]), [pred(thich, [X, Y])]).
 
+% --- Rules mapping Entity Types to Predicates ---
+% These are essential for generic queries like "Một món quà..."
+
+% Nếu X là type T thì pred(T, [X]) là true
+% Note: Prolog variable matching requires specific rules per type or a generic mechanism
+rule(pred(gift, [X]), [entity(X, object), pred(qua_tang, [X])]).
+rule(pred(vehicle, [X]), [entity(X, object), pred(dung_de, [X, _])]).
+rule(pred(animal, [X]), [entity(X, animal)]).
+rule(pred(person, [X]), [entity(X, person)]).
+rule(pred(object, [X]), [entity(X, object)]).
+rule(pred(place, [X]), [entity(X, place)]).
+rule(pred(plant, [X]), [entity(X, plant)]).
+rule(pred(flower, [X]), [entity(X, plant)]).
+
+% --- Rules for% Room inference based on contents
+rule(pred(phong_khach, [X]), [entity(X, place), pred(so_huu, [X, ghe_go])]).
+rule(pred(phong_khach, [X]), [entity(X, place), pred(chua, [X, ghe_go])]).
+rule(pred(khu_vuon, [X]), [entity(X, place), pred(chua, [X, hoa])]).
+
+% Location Transitivity
+% If X lives at Place, and Place is at Loc, then X is at Loc
+rule(pred(vi_tri, [X, Loc]), [pred(song_tai, [X, Place]), pred(vi_tri, [Place, Loc])]).
+
+% If X sleeps at Place, and Place is at Loc, then X is at Loc
+rule(pred(vi_tri, [X, Loc]), [pred(nam_ngu, [X, Place]), pred(vi_tri, [Place, Loc])]).
+
+% Inferred song_tai location: if X lives at Place and Place is at Loc, X song_tai Loc
+rule(pred(song_tai, [X, Loc]), [pred(song_tai, [X, Place]), pred(vi_tri, [Place, Loc])]).
+
+% If X is in Container, and Container is at Loc, then X is at Loc
+rule(pred(vi_tri, [X, Loc]), [pred(chua, [Container, X]), pred(vi_tri, [Container, Loc])]).
+rule(pred(khu_vuon, [X]), [entity(X, place), pred(so_huu, [X, hoa])]).
+rule(pred(khu_vuon, [X]), [entity(X, place), pred(co, [X, hoa])]).
+
+
+% ========================================
+% FORWARD CHAINING
+% Infer new facts from existing facts and rules
+% ========================================
+
 % ========================================
 % FORWARD CHAINING
 % Infer new facts from existing facts and rules
@@ -52,11 +92,21 @@ rule(pred(quan_tam, [X, Y]), [pred(thich, [X, Y])]).
 infer :-
     rule(Conclusion, Premises),
     \+ repository:fact(Conclusion),
-    forall(member(Premise, Premises), 
-           repository:fact(Premise)),
+    check_premises(Premises),
     assertz(repository:fact(Conclusion)),
     fail.
 infer.
+
+check_premises([]).
+check_premises([Premise|Rest]) :-
+    check_premise(Premise),
+    check_premises(Rest).
+
+check_premise(entity(X, T)) :-
+    repository:entity(X, T).
+check_premise(pred(P, Args)) :-
+    repository:fact(pred(P, Args)).
+
 
 % ========================================
 % RULE MANAGEMENT
