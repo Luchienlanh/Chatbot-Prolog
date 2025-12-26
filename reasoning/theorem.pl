@@ -56,9 +56,15 @@ prove(false) :- !, fail.
 
 % pred(P, Args) - Kiểm tra trong knowledge base
 % Strip const() wrapper trước khi tìm
-prove(pred(P, Args)) :- !,
+prove(pred(P, Args)) :- 
     strip_const_args(Args, StrippedArgs),
     repository:fact(pred(P, StrippedArgs)).
+
+% Inference rules
+% vi_tri(X, Y) :- chua(Y, X). (Garden contains flowers -> flowers in garden)
+prove(pred(vi_tri, [X, Y])) :-
+    strip_const(X, SX), strip_const(Y, SY),
+    prove(pred(chua, [const(SY), const(SX)])).
 
 % and(A, B) - A ∧ B đúng khi cả A và B đều đúng
 prove(and(A, B)) :- !,
@@ -129,6 +135,7 @@ substitute_in_body(Var, Value, pred(P, Args), pred(P, NewArgs)) :- !,
 substitute_in_body(_, _, X, X).
 
 substitute_arg(Var, Value, Var, Value) :- !.
+substitute_arg(Var, Value, const(Var), const(Value)) :- !.
 substitute_arg(_, _, X, X).
 
 % ========================================

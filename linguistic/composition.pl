@@ -58,12 +58,37 @@ compose_np_with_context(tree(np, [tree(pn, [word(no, pronoun)])]), [Ref|_], Sem)
     Sem = lambda(p, app(p, const(Ref))).
 compose_np_with_context(tree(np, [tree(pn, [word(do, pronoun)])]), [Ref|_], Sem) :- !,
     Sem = lambda(p, app(p, const(Ref))).
+compose_np_with_context(tree(np, [tree(pn, [word(chung, pronoun)])]), [Ref|_], Sem) :- !,
+    Sem = lambda(p, app(p, const(Ref))).
 compose_np_with_context(NP, _, Sem) :-
     compose(NP, Sem).
 
-extract_referents(pred(so_huu, [_, Object]), [Object]) :- !.
-extract_referents(pred(_, [Subject|_]), [Subject]) :- !.
+% Extract referents from first sentence for coreference
+% Helper to unwrap const
+unwrap_const(const(X), X) :- !.
+unwrap_const(X, X).
+
+extract_referents(np_entity(Entity), [Entity]) :- !.
+extract_referents(pred(so_huu, [_, Object]), [Val]) :- !, unwrap_const(Object, Val).
+extract_referents(pred(mau, [Object, _]), [Val]) :- !, unwrap_const(Object, Val).
+% Handle "Linh thich ngam hoa" -> pred(thich, [Linh, Lambda])
+extract_referents(pred(thich, [_, lambda(_, pred(_, [_, Object]))]), [Val]) :- !, unwrap_const(Object, Val).
+% Handle "Linh thich hoa" -> pred(thich, [_, Object])
+extract_referents(pred(thich, [_, Object]), [Val]) :- !, unwrap_const(Object, Val).
+% Handle relative clause "Nguoi cho Miu an" -> relative(nguoi, Lambda)
+% Preserve wrapper so beta_reduce can handle it
+extract_referents(relative(N, L), [relative(N, L)]) :- !.
+extract_referents(pred(_, [Subject|_]), [Val]) :- !, unwrap_const(Subject, Val).
+extract_referents(exists(X, _), [X]) :- !.
+extract_referents(const(X), [X]) :- !.
 extract_referents(_, []).
+
+% Compose np_statement (just NP, no VP)
+% Compose np_statement (just NP, no VP)
+compose(tree(np_statement, [NP]), Semantics) :- !,
+    compose(NP, NPSem),
+    extract_entity(NPSem, Entity),
+    Semantics = np_entity(Entity).
 
 % -------------------------------------------
 % SBARQ - Câu hỏi WH
@@ -191,7 +216,9 @@ compose(tree(vp, [VB]), Semantics) :- !,
 
 % VP -> VB PP (ngủ trong phòng khách) -> vi_tri(x, location)
 % Must be before VB NP to match correctly
-compose(tree(vp, [_VB, PP]), Semantics) :-
+% VP -> VB PP (ngủ trong phòng khách)
+% VP -> VB PP (ngủ trong phòng khách)
+compose(tree(vp, [VB, PP]), Semantics) :-
     PP = tree(pp, _), !,
     compose(PP, PPSem),
     extract_location_from_pp(PPSem, Location),
@@ -333,6 +360,7 @@ contains_wh(tree(vp_copula, [_, _, tree(pp, [_, tree(wp, _)])]), who) :- !.
 extract_entity(const(E), E) :- !.
 extract_entity(lambda(_, app(_, const(E))), E) :- !.
 extract_entity(app(_, const(E)), E) :- !.
+extract_entity(relative(N, L), relative(N, L)) :- !.
 extract_entity(E, E) :- atomic(E), !.
 extract_entity(_, unknown).
 
@@ -413,6 +441,46 @@ beta_reduce(app(F, A), app(F, RA)) :-
     beta_reduce(A, RA),
     RA \= A, !.
 
+% Beta reduce relative clause applied to an Argument (Noun modifier case)
+beta_reduce(app(const(relative(Noun, Pred)), Arg), conj(pred(Noun, [Arg]), AppPred)) :- 
+    \+ is_lambda_term(Arg), !,
+    beta_reduce(app(Pred, Arg), AppPred).
+
+% Symmetric case: Entity applied to Relative (because of Copula identity)
+beta_reduce(app(Arg, const(relative(Noun, Pred))), conj(pred(Noun, [Arg]), AppPred)) :- 
+    \+ is_lambda_term(Arg), !,
+    beta_reduce(app(Pred, Arg), AppPred).
+
+% Beta reduce relative clause applied to a Property (Subject case) -> Existential
+beta_reduce(app(const(relative(Noun, Pred)), Property), exists(e, conj(conj(pred(Noun, [e]), BodyRel), BodyProp))) :- 
+    is_lambda_term(Property), !,
+    beta_reduce(app(Pred, const(e)), BodyRel),
+    beta_reduce(app(Property, const(e)), BodyProp).
+
+% Helper to check if term is lambda/abstraction
+is_lambda_term(lambda(_, _)).
+
+beta_reduce(exists(Var, Body), exists(Var, RBody)) :- !,
+    beta_reduce(Body, RBody).
+
+beta_reduce(forall(Var, Body), forall(Var, RBody)) :- !,
+    beta_reduce(Body, RBody).
+
+beta_reduce(conj(A, B), conj(RA, RB)) :- !,
+    beta_reduce(A, RA),
+    beta_reduce(B, RB).
+
+beta_reduce(impl(A, B), impl(RA, RB)) :- !,
+    beta_reduce(A, RA),
+    beta_reduce(B, RB).
+
+beta_reduce(pred(P, Args), pred(P, RArgs)) :- !,
+    maplist(beta_reduce, Args, RArgs).
+
+beta_reduce(text_sem(A, B), text_sem(RA, RB)) :- !,
+    beta_reduce(A, RA),
+    beta_reduce(B, RB).
+
 beta_reduce(X, X).
 
 beta_reduce_full(Term, Result) :-
@@ -446,5 +514,8 @@ substitute(Var, Value, exists(V, Body), exists(V, NewBody)) :-
 substitute(_, _, X, X).
 
 sub_arg(Var, Value, Var, Value) :- !.
+
 sub_arg(_, _, X, X).
+
+% (Removed extract_target_from_pp)
 

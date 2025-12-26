@@ -87,8 +87,12 @@ merge_compound_words([choi, voi | Rest], [choi_voi | MergedRest]) :- !,
 % Special: "mau xanh" -> "mau, xanh" (for adjective phrase)
 merge_compound_words([mau, xanh | Rest], [mau, xanh | MergedRest]) :- !,
     merge_compound_words(Rest, MergedRest).
-% Special: Don't merge "o dau" - keep separate for VP WRB parsing
+% Special: "o dau" -> "o, dau" - BUT wait, parsing logic needs them separate?
+% The comment line 90 says "Don't merge", so let's keep it separate.
 merge_compound_words([o, dau | Rest], [o, dau | MergedRest]) :- !,
+    merge_compound_words(Rest, MergedRest).
+% Special: "ten la" -> "ten_la" (name is)
+merge_compound_words([ten, la | Rest], [ten_la | MergedRest]) :- !,
     merge_compound_words(Rest, MergedRest).
 % General case: try to merge if known
 merge_compound_words([W1, W2 | Rest], [Merged | MergedRest]) :-
@@ -109,10 +113,10 @@ is_known_word(Word) :-
 normalize_string(String, Normalized) :-
     string_lower(String, Lower),
     remove_accents(Lower, NoAccents),
-    % Add space before and after periods to split sentences
-    re_replace("\\."/g, " ", NoAccents, NoPeriods),
+    % Add spaces around periods to split sentences (keep the period!)
+    re_replace("\\."/g, " . ", NoAccents, WithSpacedPeriods),
     % Remove ALL question marks and exclamation marks (handles Unicode better)
-    re_replace("[?!¿¡]"/g, "", NoPeriods, Normalized).
+    re_replace("[?!¿¡]"/g, "", WithSpacedPeriods, Normalized).
 
 remove_accents(String, Result) :-
     string_chars(String, Chars),

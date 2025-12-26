@@ -75,6 +75,7 @@ predicate(choi_voi, 2).   % choi_voi(X, Y): X chơi với Y
 predicate(chua, 2).       % chua(X, Y): X chứa Y
 predicate(ngam, 2).       % ngam(X, Y): X ngắm Y
 predicate(phia_sau, 2).   % phia_sau(X, Y): X ở phía sau Y
+predicate(hoa, 1).        % hoa(X): X là hoa
 
 % ========================================
 % KIỂM TRA BIỂU THỨC HỢP LỆ - Section 2.3 Report
@@ -135,6 +136,8 @@ entity(X, Type) :-
 
 % 1. Linh là em gái của Nhân.
 fact(pred(em_gai, [linh, nhan])).
+fact(pred(nguoi, [nhan])).
+fact(pred(nguoi, [linh])).
 
 % 2. Nhân và Linh sống tại một ngôi nhà nhỏ ở ngoại ô.
 fact(pred(song_tai, [nhan, nha_nho])).
@@ -183,6 +186,7 @@ fact(pred(chua, [vuon, hoa])).
 % 12. Cuối tuần Linh thường ra vườn ngắm hoa.
 fact(pred(ngam, [linh, hoa])).
 fact(pred(thich, [linh, vuon])).  % Inferred
+fact(pred(hoa, [hoa])).           % "hoa" là tập hợp hoa
 
 % --- Miu's location (inferred from sentence 9) ---
 fact(pred(vi_tri, [miu, phong_khach])).

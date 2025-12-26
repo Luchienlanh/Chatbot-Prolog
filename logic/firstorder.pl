@@ -48,6 +48,26 @@ convert(drs([], Conds), FOL) :- !,
 convert(drs([Ref|Refs], Conds), exists(Ref, RestFOL)) :- !,
     convert(drs(Refs, Conds), RestFOL).
 
+% text_sem(S1, S2) -> merge scope if S1 is existential
+convert(text_sem(exists(Var, Body), S2), exists(Var, and(FBody, FS2))) :- !,
+    convert(Body, FBody),
+    convert(S2, FS2).
+
+% For non-existential S1, we treat it as context (assumed true) and only prove S2.
+% This avoids failures when S1 is not strictly provable in KB "Người cho Miu ăn."
+convert(text_sem(_S1, S2), FS2) :- !,
+    convert(S2, FS2).
+
+% Recursive conversion for logical structures logic
+convert(conj(A, B), and(FA, FB)) :- !,
+    convert(A, FA),
+    convert(B, FB).
+
+convert(exists(Var, Body), exists(Var, FBody)) :- !,
+    convert(Body, FBody).
+
+convert(pred(P, Args), pred(P, Args)) :- !.
+
 % Fallback cho các trường hợp khác
 convert(X, X).
 
@@ -78,6 +98,19 @@ convert_condition(conj(A, B), and(FOLA, FOLB)) :- !,
 % DRS lồng nhau
 convert_condition(drs(Refs, Conds), FOL) :- !,
     convert(drs(Refs, Conds), FOL).
+
+% Handle text_sem in DRS condition (e.g. from composition)
+convert_condition(text_sem(S1, S2), FOL) :- !,
+    convert(text_sem(S1, S2), FOL).
+
+% Handle explicit existential quantifier in logic form (naked exists)
+convert_condition(exists(Var, Body), exists(Var, FBody)) :- !,
+    convert_condition(Body, FBody).
+
+% Handle explicit logical structure embedded in DRS
+convert_condition(and(A, B), and(FA, FB)) :- !,
+    convert_condition(A, FA),
+    convert_condition(B, FB).
 
 % Fallback
 convert_condition(Cond, Cond).

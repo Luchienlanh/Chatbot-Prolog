@@ -87,9 +87,12 @@ query(Question, Type) :-
     analyzer:tokenize(Question, Tokens),
     format('~w~n', [Tokens]),
     
-    % Stage 2: Parsing
+    % Stage 2: Parsing (try multi-sentence first, then single)
     write('Stage 2: Parsing... '),
-    ( structures:parse(Tokens, Type, Tree) ->
+    ( memberchk('.', Tokens), structures:parse_text(Tokens, Type, Tree) ->
+        writeln('OK (multi-sentence)'),
+        format('   Parse Tree: ~w~n', [Tree])
+    ; structures:parse(Tokens, Type, Tree) ->
         writeln('OK'),
         format('   Parse Tree: ~w~n', [Tree])
     ;

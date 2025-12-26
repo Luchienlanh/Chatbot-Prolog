@@ -77,6 +77,10 @@ text_yn(tree(text, [S1, S2])) -->
     punct,
     question_part(S2).
 
+% Statement can be just NP (Một chiếc xe màu xanh.) - Try this first to capture NP_REL
+statement_part(tree(np_statement, [NP])) -->
+    np(NP).
+
 statement_part(tree(s, [NP, VP])) -->
     np(NP),
     vp(VP).
@@ -90,6 +94,16 @@ question_part(tree(sq, [NP, VP])) -->
     np(NP),
     vp(VP),
     [?].
+
+% Question without explicit QM (Nó là của Linh? - ? is removed by tokenizer)
+question_part(tree(sq, [NP, VP])) -->
+    np(NP),
+    vp(VP).
+
+% Question with copula (Nó là của ai)
+question_part(tree(sq, [NP, VP_COP])) -->
+    np(NP),
+    vp_copula(VP_COP).
 
 punct --> ['.'].
 punct --> [','].
@@ -189,8 +203,8 @@ np(tree(np, [DT, CL, NN, ADJ])) -->
     nn(NN),
     adj_phrase(ADJ).
 
-% NP -> "những" ADJ NN (những bông hoa)
-np(tree(np, [DT, CL, NN])) -->
+% NP -> "những" CL NN (những bông hoa)
+np(tree(np, [tree(dt, [word(nhung, determiner)]), CL, NN])) -->
     [nhung],
     cl(CL),
     nn(NN).
@@ -395,6 +409,7 @@ is_common_noun(xe).
 is_common_noun(ten).
 is_common_noun(em_gai).
 is_common_noun(bong).
+is_common_noun(hoa).
 
 % Intransitive verbs
 is_intrans_verb(ngu).
@@ -405,6 +420,7 @@ is_intrans_verb(nam_ngu).
 is_trans_verb(thich).
 is_trans_verb(so_huu).
 is_trans_verb(cho_an).
+is_trans_verb(ten_la).
 is_trans_verb(o).
 is_trans_verb(song_cung).
 is_trans_verb(song_tai).
@@ -450,6 +466,7 @@ is_classifier(bong).
 % Pronouns
 is_pronoun(no).
 is_pronoun(do).
+is_pronoun(chung).  % chúng (plural they/them)
 is_pronoun(anh_ay).
 is_pronoun(co_ay).
 

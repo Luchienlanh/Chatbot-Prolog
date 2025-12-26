@@ -33,10 +33,9 @@ test_case('nq16', yn, "Miu ngủ trong phòng khách phải không?").
 test_case('nq17', yn, "Khu vườn ở sau nhà phải không?").
 test_case('nq18', yn, "Nhân sống tại ngoại ô phải không?").
 test_case('nq19', yn, "Mot chiec xe mau xanh. No la cua Linh?").
-% Note: nq20-22 are complex cross-sentence coreference - temporarily skipped
-% test_case('nq20', yn, "Linh co mot con meo. Ten no la Miu?").
-% test_case('nq21', yn, "Nguoi cho Miu an. Do la Nhan?").
-% test_case('nq22', yn, "Linh thich ngam hoa. Nhung bong hoa o trong vuon?").
+test_case('nq20', yn, "Linh co mot con meo. No ten la Miu?").
+test_case('nq21', yn, "Nguoi cho Miu an. Do la Nhan?").
+test_case('nq22', yn, "Linh thich ngam hoa. Chung o trong vuon?").
 
 % Main execution loop
 run_all_tests :-

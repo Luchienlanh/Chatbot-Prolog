@@ -80,7 +80,7 @@ word_semantics(xanh, noun_proper, lambda(p, app(p, const(xanh)))).
 
 word_semantics(nguoi, noun_common, lambda(x, pred(nguoi, [x]))).
 word_semantics(dong_vat, noun_common, lambda(x, pred(dong_vat, [x]))).
-word_semantics(con_meo, noun_common, lambda(x, pred(meo, [x]))).
+word_semantics(con_meo, noun_common, lambda(x, pred(la_meo, [x]))).
 word_semantics(thu_cung, noun_common, lambda(x, pred(thu_cung, [x]))).
 word_semantics(mon_qua, noun_common, lambda(x, pred(qua_tang, [x]))).
 word_semantics(phuong_tien, noun_common, lambda(x, pred(phuong_tien, [x]))).
@@ -89,6 +89,7 @@ word_semantics(do_vat, noun_common, lambda(x, pred(do_vat, [x]))).
 word_semantics(xe, noun_common, lambda(x, pred(xe, [x]))).
 word_semantics(ten, noun_common, lambda(x, pred(ten, [x]))).
 word_semantics(bong, noun_common, lambda(x, pred(bong, [x]))).
+word_semantics(hoa, noun_common, lambda(x, pred(hoa, [x]))).
 
 % Relationship nouns
 word_semantics(em_gai, noun_relation, lambda(p, app(p, const(em_gai)))).
@@ -130,22 +131,22 @@ word_semantics(la_meo, verb_intrans, lambda(x, pred(la_meo, [x]))).
 % ========================================
 
 word_semantics(thich, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(thich, [x, y])))))).
+    lambda(p, lambda(s, app(p, lambda(o, pred(thich, [s, o])))))).
 
 word_semantics(so_huu, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(so_huu, [x, y])))))).
+    lambda(p, lambda(s, app(p, lambda(o, pred(so_huu, [s, o])))))).
 
 word_semantics(co, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(so_huu, [x, y])))))).
+    lambda(p, lambda(s, app(p, lambda(o, pred(so_huu, [s, o])))))).
 
 word_semantics(cho_an, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(cho_an, [x, y])))))).
+    lambda(p, lambda(s, app(p, lambda(o, pred(cho_an, [s, o])))))).
 
 word_semantics(choi_voi, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(choi_voi, [x, y])))))).
+    lambda(p, lambda(s, app(p, lambda(o, pred(choi_voi, [s, o])))))).
 
 word_semantics(song_tai, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(song_tai, [x, y])))))).
+    lambda(p, lambda(s, app(p, lambda(o, pred(song_tai, [s, o])))))).
 
 word_semantics(choi, verb_trans, 
     lambda(p, lambda(x, app(p, lambda(y, pred(choi_voi, [x, y])))))).
@@ -162,7 +163,7 @@ word_semantics(ngam, verb_trans,
 word_semantics(quen, verb_trans, 
     lambda(p, lambda(x, app(p, lambda(y, pred(quen, [x, y])))))).
 
-word_semantics(ten, verb_trans, 
+word_semantics(ten_la, verb_trans, 
     lambda(p, lambda(x, app(p, lambda(y, pred(ten, [x, y])))))).
 
 % Động từ "ở" với nghĩa vị trí
@@ -198,10 +199,12 @@ word_semantics(gui, verb_ditrans,
 
 % "Một" - Existential quantifier
 % Kiểu: (e→t) → ((e→t)→t)
-% Format theo Slide-BUOI-09: λP. λQ. ∃X. (P@X ∧ Q@X)
 word_semantics(mot, determiner,
-    lambda(p, lambda(q, 
-        exists(x, conj(app(p, x), app(q, x)))))).
+    lambda(p, lambda(q, exists(e, conj(app(p, e), app(q, e)))))).
+
+% "Những" - Existential quantifier (treated same as 'mot' for simplicty)
+word_semantics(nhung, determiner,
+    lambda(p, lambda(q, exists(e, conj(app(p, e), app(q, e)))))).
 
 % "Mọi", "Mỗi" - Universal quantifier
 % Format: λP. λQ. ∀X. (P@X → Q@X)
