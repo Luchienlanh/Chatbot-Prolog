@@ -169,6 +169,10 @@ np(tree(np, [NNP])) -->
 np(tree(np, [NNP])) -->
     compound_noun(NNP).
 
+% NP -> compound common noun (khu_vuon as type)
+np(tree(np, [NN])) -->
+    compound_common_noun(NN).
+
 % NP -> NN (Common noun)  
 np(tree(np, [NN])) -->
     nn(NN).
@@ -314,23 +318,23 @@ adj_phrase(tree(adjp, [tree(nn, [word(mau, noun_common)]), ADJ])) -->
     adj(ADJ).
 
 % ========================================
-% COMPOUND NOUNS
+% COMPOUND NOUNS - Only for true named entities
 % ========================================
 
-compound_noun(tree(nnp, [word(khu_vuon, noun_proper)])) -->
-    [khu, vuon].
-compound_noun(tree(nnp, [word(khu_vuon, noun_proper)])) -->
-    [khu_vuon].
-compound_noun(tree(nnp, [word(xe_dap, noun_proper)])) -->
-    [xe, dap].
-compound_noun(tree(nnp, [word(phong_khach, noun_proper)])) -->
-    [phong, khach].
-compound_noun(tree(nnp, [word(sau_nha, noun_proper)])) -->
-    [sau, nha].
-compound_noun(tree(nnp, [word(ngoai_o, noun_proper)])) -->
-    [ngoai, o].
-compound_noun(tree(nnp, [word(em_gai, noun_common)])) -->
-    [em, gai].
+compound_noun(tree(nnp, [word(xe_dap_nhan, noun_proper)])) --> [xe_dap_nhan].
+compound_noun(tree(nnp, [word(nha_nhan_linh, noun_proper)])) --> [nha_nhan_linh].
+compound_noun(tree(nnp, [word(khu_vuon, noun_proper)])) --> [khu_vuon].
+compound_noun(tree(nnp, [word(khu_vuon, noun_proper)])) --> [khu, vuon].
+compound_noun(tree(nnp, [word(cac_bong_hoa, noun_proper)])) --> [cac_bong_hoa].
+compound_noun(tree(nnp, [word(em_gai, noun_common)])) --> [em, gai].
+
+% ========================================
+% COMPOUND COMMON NOUNS - Type predicates
+% ========================================
+
+% sau_nha as location phrase
+compound_common_noun(tree(nn, [word(sau_nha, noun_common)])) --> [sau, nha].
+compound_common_noun(tree(nn, [word(sau_nha, noun_common)])) --> [sau_nha].
 
 % ========================================
 % TERMINALS - POS Tags
@@ -385,31 +389,33 @@ qm(tree(qm, [word(W, qm)])) --> [W], {is_question_marker(W)}.
 % LEXICON (Từ điển)
 % ========================================
 
-% Proper nouns
+% Proper nouns - ONLY true named entities
 is_proper_noun(linh).
 is_proper_noun(nhan).
 is_proper_noun(miu).
 is_proper_noun(bo_nhan).
-is_proper_noun(hoa).
-is_proper_noun(xe_dap).
-is_proper_noun(vuon).
-is_proper_noun(khu_vuon).
-is_proper_noun(phong_khach).
+is_proper_noun(xe_dap_nhan).
+is_proper_noun(nha_nhan_linh).
+is_proper_noun(cac_bong_hoa).
 is_proper_noun(truong).
-is_proper_noun(ghe_go).
-is_proper_noun(nha).
-is_proper_noun(sau_nha).
 is_proper_noun(ngoai_o).
+is_proper_noun(xanh).
 
-% Common nouns
+% Common nouns - Type predicates
 is_common_noun(nguoi).
 is_common_noun(meo).
 is_common_noun(con_meo).
 is_common_noun(xe).
+is_common_noun(xe_dap).  % Type predicate!
+is_common_noun(ghe).
+is_common_noun(nha).
+is_common_noun(phong_khach).  % Type predicate!
+is_common_noun(vuon).  % Type predicate!
+is_common_noun(sau_nha).  % Location
 is_common_noun(ten).
 is_common_noun(em_gai).
 is_common_noun(bong).
-is_common_noun(hoa).
+is_common_noun(hoa).  % Type predicate!
 
 % Intransitive verbs
 is_intrans_verb(ngu).

@@ -71,10 +71,16 @@ unwrap_const(X, X).
 extract_referents(np_entity(Entity), [Entity]) :- !.
 extract_referents(pred(so_huu, [_, Object]), [Val]) :- !, unwrap_const(Object, Val).
 extract_referents(pred(mau, [Object, _]), [Val]) :- !, unwrap_const(Object, Val).
-% Handle "Linh thich ngam hoa" -> pred(thich, [Linh, Lambda])
-extract_referents(pred(thich, [_, lambda(_, pred(_, [_, Object]))]), [Val]) :- !, unwrap_const(Object, Val).
+
+% Handle serial verb "thich ngam hoa" with common noun
+% Lambda: pred(thich, [linh, lambda(x, pred(hoa, [lambda(y, pred(ngam, [x, y]))]))])
+% Should extract: cac_bong_hoa (resolved from hoa type)
+extract_referents(pred(thich, [_, lambda(_, pred(TypePred, _))]), [Constant]) :- 
+    !, find_constant_of_type(TypePred, Constant).
+
 % Handle "Linh thich hoa" -> pred(thich, [_, Object])
 extract_referents(pred(thich, [_, Object]), [Val]) :- !, unwrap_const(Object, Val).
+
 % Handle relative clause "Nguoi cho Miu an" -> relative(nguoi, Lambda)
 % Preserve wrapper so beta_reduce can handle it
 extract_referents(relative(N, L), [relative(N, L)]) :- !.
@@ -84,66 +90,48 @@ extract_referents(const(X), [X]) :- !.
 extract_referents(_, []).
 
 % Compose np_statement (just NP, no VP)
-% Compose np_statement (just NP, no VP)
+% Pure compositional - just keep NP semantics
 compose(tree(np_statement, [NP]), Semantics) :- !,
-    compose(NP, NPSem),
-    extract_entity(NPSem, Entity),
-    Semantics = np_entity(Entity).
+    compose(NP, Semantics).
 
 % -------------------------------------------
-% SBARQ - Câu hỏi WH
+% SBARQ - Câu hỏi WH (Compositional Semantics)
+% Theo lý thuyết Lambda Calculus - Slide DOAN-01
 % -------------------------------------------
 
-% SBARQ với WP ở subject cho "là" (Ai là em gái của Nhân?)
-% Must be before general WHO rule
-compose(tree(sbarq, [tree(wp, _), VP]), Semantics) :-
-    VP = tree(vp_copula, [_, NP, PP]),
-    extract_entity_from_np(NP, Relation),
-    extract_entity_from_pp(PP, Target), !,
-    Semantics = wh_question(who, pred(Relation, [_, Target])).
+% SBARQ → WH VP (Ai thích hoa?, Ai là em gái của Nhân?)
+% Áp dụng: ||WH|| @ ||VP||
+% Where ||WH|| = λVP. wh_question(who, VP@_)
+%       ||VP|| = λx. pred(thich, [x, hoa])
+% Result: wh_question(who, pred(thich, [_, hoa]))
+compose(tree(sbarq, [WH, VP]), Semantics) :-
+    tree_has_wh_node(WH), !,
+    compose(WH, WHSem),
+    compose(VP, VPSem),
+    RawSem = app(WHSem, VPSem),
+    beta_reduce_full(RawSem, Semantics).
 
-% SBARQ với WP ở subject (Ai thích hoa?)
+% SBARQ → NP VP[+wh] (Linh thích gì?, Mèo tên gì?)
+% VP chứa WH-word ở object position
+% Áp dụng: ||NP|| @ ||VP||
+% Where ||NP|| = λP. P@linh
+%       ||VP|| = λx. wh_question(what, pred(thich, [x, _]))
+% Result: wh_question(what, pred(thich, [linh, _]))
 compose(tree(sbarq, [NP, VP]), Semantics) :-
-    contains_wh(NP, who), !,
-    extract_predicate_from_vp(VP, Pred),
-    extract_object_from_vp(VP, Object),
-    Semantics = wh_question(who, pred(Pred, [_, Object])).
-
-% SBARQ với WP ở object (Linh thích gì?)
-compose(tree(sbarq, [NP, VP]), Semantics) :-
-    contains_wh(VP, what), !,
+    tree_has_wh_node(VP), !,
     compose(NP, NPSem),
-    extract_entity(NPSem, Subject),
-    extract_predicate_from_vp(VP, Pred),
-    Semantics = wh_question(what, pred(Pred, [Subject, _])).
+    compose(VP, VPSem),
+    RawSem = app(NPSem, VPSem),
+    beta_reduce_full(RawSem, Semantics).
 
-% SBARQ với "là gì của" (Linh là gì của Nhân?)
-compose(tree(sbarq, [NP, VP]), Semantics) :-
-    VP = tree(vp_copula, [_, tree(wp, _), PP]), !,
+% SBARQ fallback - Pure compositional (NP VP)
+% All other SBARQ cases handled by general lambda composition
+compose(tree(sbarq, [NP, VP]), Semantics) :- !,
     compose(NP, NPSem),
-    extract_entity(NPSem, Subject),
-    extract_entity_from_pp(PP, Target),
-    Semantics = wh_question(what_relation, relation(Subject, _, Target)).
+    compose(VP, VPSem),
+    RawSem = app(NPSem, VPSem),
+    beta_reduce_full(RawSem, Semantics).
 
-% SBARQ với "là của ai" (Xe đạp là của ai?)
-compose(tree(sbarq, [NP, VP]), Semantics) :-
-    VP = tree(vp_copula, [_, tree(pp, [_, tree(np, [tree(wp, _)])])]), !,
-    compose(NP, NPSem),
-    extract_entity(NPSem, Object),
-    Semantics = wh_question(who, pred(so_huu, [_, Object])).
-
-% SBARQ với WRB (Miu ở đâu?)
-compose(tree(sbarq, [NP, VP]), Semantics) :-
-    contains_wh(VP, where), !,
-    compose(NP, NPSem),
-    extract_entity(NPSem, Subject),
-    Semantics = wh_question(where, Subject).
-
-% SBARQ với VP chứa WRB (Khu vườn ở đâu?)
-compose(tree(sbarq, [NP, tree(vp, [_, tree(np, [tree(wrb, _)])])]), Semantics) :- !,
-    compose(NP, NPSem),
-    extract_entity(NPSem, Subject),
-    Semantics = wh_question(where, Subject).
 
 % SBARQ mặc định
 compose(tree(sbarq, [NP, VP]), Semantics) :- !,
@@ -215,16 +203,45 @@ compose(tree(vp, [VB]), Semantics) :- !,
     compose(VB, Semantics).
 
 % VP -> VB PP (ngủ trong phòng khách) -> vi_tri(x, location)
-% Must be before VB NP to match correctly
 % VP -> VB PP (ngủ trong phòng khách)
-% VP -> VB PP (ngủ trong phòng khách)
+% Special case: PP with bare common noun
+compose(tree(vp, [VB, tree(pp, [P, tree(np, [tree(nn, [word(NounWord, noun_common)])])])]), Semantics) :- !,
+    % PP has common noun - resolve to constant
+    find_constant_of_type(NounWord, Constant),
+    Semantics = lambda(x, pred(vi_tri, [x, const(Constant)])).
+
+% VP -> VB PP (general case)
 compose(tree(vp, [VB, PP]), Semantics) :-
     PP = tree(pp, _), !,
     compose(PP, PPSem),
     extract_location_from_pp(PPSem, Location),
     Semantics = lambda(x, pred(vi_tri, [x, Location])).
 
-% VP -> VB NP (Transitive)
+% VP -> VB WH (thích gì?, tên gì?)
+% Compositional: VB@WH với beta reduction
+% Where ||VB|| = λP. λx. P@(λy. pred(thich, [x, y]))
+%       ||WH|| = λP. wh_question(what, P@_)
+% Result: λx. wh_question(what, pred(thich, [x, _]))
+compose(tree(vp, [VB, WH]), Semantics) :-
+    tree_has_wh_node(WH), !,
+    compose(VB, VBSem),
+    compose(WH, WHSem),
+    RawSem = app(VBSem, WHSem),
+    beta_reduce_full(RawSem, Semantics).
+
+% VP -> VB NP where NP is BARE common noun (no determiner)
+% Handle definite interpretation: "thích xe đạp" means "thích THE xe đạp (that we know)"
+% Resolve via type assertions to find constant
+compose(tree(vp, [VB, tree(np, [tree(nn, [word(NounWord, noun_common)])])]), Semantics) :- !,
+    % NP is bare common noun - need to resolve to constant
+    compose(VB, VBSem),
+    % Find constant that satisfies this type
+    find_constant_of_type(NounWord, Constant),
+    % Apply verb to constant
+    RawSem = app(VBSem, lambda(p, app(p, const(Constant)))),
+    beta_reduce_full(RawSem, Semantics).
+
+% VP -> VB NP (Transitive - general case)
 compose(tree(vp, [VB, NP]), Semantics) :-
     NP = tree(np, _), !,
     compose(VB, VBSem),
@@ -357,6 +374,18 @@ contains_wh(tree(vp, [_, NP]), Type) :- !, contains_wh(NP, Type).
 contains_wh(tree(vp, [_, NP, _]), Type) :- !, contains_wh(NP, Type).
 contains_wh(tree(vp_copula, [_, _, tree(pp, [_, tree(wp, _)])]), who) :- !.
 
+% Check if a tree node contains WH-word
+tree_has_wh_node(tree(np, [tree(wp, _)])) :- !.
+tree_has_wh_node(tree(wp, _)) :- !.
+tree_has_wh_node(tree(wrb, _)) :- !.
+tree_has_wh_node(tree(vp, Children)) :- !,
+    member(Child, Children),
+    tree_has_wh_node(Child).
+tree_has_wh_node(tree(_, Children)) :-
+    is_list(Children),
+    member(Child, Children),
+    tree_has_wh_node(Child).
+
 extract_entity(const(E), E) :- !.
 extract_entity(lambda(_, app(_, const(E))), E) :- !.
 extract_entity(app(_, const(E)), E) :- !.
@@ -457,6 +486,21 @@ beta_reduce(app(const(relative(Noun, Pred)), Property), exists(e, conj(conj(pred
     beta_reduce(app(Pred, const(e)), BodyRel),
     beta_reduce(app(Property, const(e)), BodyProp).
 
+% ========================================
+% BETA REDUCTION FOR WH-QUESTIONS
+% ========================================
+
+% Beta reduce WH-question lambda application
+% λVP. wh_question(Type, VP@_) applied to λx. pred(P, [x, obj])
+% Result: wh_question(Type, pred(P, [_, obj]))
+beta_reduce(app(lambda(vp, wh_question(Type, Expr)), VP), Result) :- !,
+    substitute(vp, VP, Expr, Reduced),
+    Result = wh_question(Type, Reduced).
+
+% Beta reduce body of wh_question
+beta_reduce(wh_question(Type, Body), wh_question(Type, RBody)) :- !,
+    beta_reduce(Body, RBody).
+
 % Helper to check if term is lambda/abstraction
 is_lambda_term(lambda(_, _)).
 
@@ -508,6 +552,8 @@ substitute(_Var, _Value, const(X), const(X)) :- !.
 substitute(Var, Value, conj(A, B), conj(NA, NB)) :- !,
     substitute(Var, Value, A, NA),
     substitute(Var, Value, B, NB).
+substitute(Var, Value, wh_question(Type, Body), wh_question(Type, NewBody)) :- !,
+    substitute(Var, Value, Body, NewBody).
 substitute(Var, Value, exists(V, Body), exists(V, NewBody)) :- 
     Var \= V, !,
     substitute(Var, Value, Body, NewBody).
@@ -518,4 +564,25 @@ sub_arg(Var, Value, Var, Value) :- !.
 sub_arg(_, _, X, X).
 
 % (Removed extract_target_from_pp)
+
+% ========================================
+% HELPER: Resolve common noun to constant
+% ========================================
+
+% find_constant_of_type(+TypePredicate, -Constant)
+% Find a constant that satisfies the given type predicate
+% Uses type assertions from repository: pred(type, [constant])
+find_constant_of_type(Type, Constant) :-
+    repository:fact(pred(Type, [Constant])),
+    repository:constant(Constant, _), !.
+
+% Fallback: if no type assertion found, use hardcoded mappings
+find_constant_of_type(xe_dap, xe_dap_nhan) :- !.
+find_constant_of_type(nha, nha_nhan_linh) :- !.
+find_constant_of_type(vuon, khu_vuon) :- !.
+find_constant_of_type(khu_vuon, khu_vuon) :- !.
+find_constant_of_type(hoa, cac_bong_hoa) :- !.
+find_constant_of_type(ghe, ghe_go) :- !.
+find_constant_of_type(phong_khach, phong_khach) :- !.
+find_constant_of_type(sau_nha, nha_nhan_linh) :- !.  % "sau nhà" refers to behind THE house
 

@@ -35,64 +35,74 @@
 ]).
 
 % ========================================
-% 1. DANH TỪ RIÊNG (PROPER NOUNS)
+% 1. HẰNG (CONSTANTS) - Proper Names ONLY
 % Kiểu: (e→t)→t
 % Format: λP. P@const
+% CHỈ dành cho TÊN RIÊNG của con người và động vật
 % ========================================
 
-% Người
+% Người (proper names)
 word_semantics(nhan, noun_proper, lambda(p, app(p, const(nhan)))).
 word_semantics(linh, noun_proper, lambda(p, app(p, const(linh)))).
 word_semantics(bo_nhan, noun_proper, lambda(p, app(p, const(bo_nhan)))).
 word_semantics(bo, noun_proper, lambda(p, app(p, const(bo_nhan)))).
 
-% Động vật
+% Động vật (proper name - pet with name)
 word_semantics(miu, noun_proper, lambda(p, app(p, const(miu)))).
-word_semantics(meo, noun_proper, lambda(p, app(p, const(miu)))).
 
-% Đồ vật
-word_semantics(xe_dap, noun_proper, lambda(p, app(p, const(xe_dap)))).
-word_semantics(xe, noun_proper, lambda(p, app(p, const(xe_dap)))).
-word_semantics(ghe_go, noun_proper, lambda(p, app(p, const(ghe_go)))).
-word_semantics(ghe, noun_proper, lambda(p, app(p, const(ghe_go)))).
+% Objects/Places - ONLY unique constants (không có common noun version)
+word_semantics(xe_dap_nhan, noun_proper, lambda(p, app(p, const(xe_dap_nhan)))).
+word_semantics(nha_nhan_linh, noun_proper, lambda(p, app(p, const(nha_nhan_linh)))).
+word_semantics(cac_bong_hoa, noun_proper, lambda(p, app(p, const(cac_bong_hoa)))).
 
-% Địa điểm
-word_semantics(nha, noun_proper, lambda(p, app(p, const(nha)))).
-word_semantics(nha_nho, noun_proper, lambda(p, app(p, const(nha_nho)))).
-word_semantics(phong_khach, noun_proper, lambda(p, app(p, const(phong_khach)))).
-word_semantics(vuon, noun_proper, lambda(p, app(p, const(vuon)))).
-word_semantics(khu_vuon, noun_proper, lambda(p, app(p, const(vuon)))).
+% Locations/attributes without common noun versions
 word_semantics(truong, noun_proper, lambda(p, app(p, const(truong)))).
 word_semantics(ngoai_o, noun_proper, lambda(p, app(p, const(ngoai_o)))).
-word_semantics(sau_nha, noun_proper, lambda(p, app(p, const(sau_nha)))).
-
-% Thực vật
-word_semantics(hoa, noun_proper, lambda(p, app(p, const(hoa)))).
-
-% Màu sắc (dùng như danh từ)
 word_semantics(xanh, noun_proper, lambda(p, app(p, const(xanh)))).
 
 % ========================================
 % 2. DANH TỪ CHUNG (COMMON NOUNS)
+% Vị từ 1 ngôi - Type predicates
 % Kiểu: e→t
-% Format: λX. danh_từ(X)
+% Format: λP. pred(type, [P])
 % ========================================
 
+% Person types
 word_semantics(nguoi, noun_common, lambda(x, pred(nguoi, [x]))).
+
+% Animal types
 word_semantics(dong_vat, noun_common, lambda(x, pred(dong_vat, [x]))).
-word_semantics(con_meo, noun_common, lambda(x, pred(la_meo, [x]))).
+word_semantics(meo, noun_common, lambda(x, pred(meo, [x]))).
+word_semantics(con_meo, noun_common, lambda(x, pred(meo, [x]))).
+word_semantics(la_meo, noun_common, lambda(x, pred(meo, [x]))).
 word_semantics(thu_cung, noun_common, lambda(x, pred(thu_cung, [x]))).
-word_semantics(mon_qua, noun_common, lambda(x, pred(qua_tang, [x]))).
-word_semantics(phuong_tien, noun_common, lambda(x, pred(phuong_tien, [x]))).
-word_semantics(noi, noun_common, lambda(x, pred(dia_diem, [x]))).
-word_semantics(do_vat, noun_common, lambda(x, pred(do_vat, [x]))).
+
+% Object types - Vehicles, furniture
+word_semantics(xe_dap, noun_common, lambda(x, pred(xe_dap, [x]))).
 word_semantics(xe, noun_common, lambda(x, pred(xe, [x]))).
-word_semantics(ten, noun_common, lambda(x, pred(ten, [x]))).
-word_semantics(bong, noun_common, lambda(x, pred(bong, [x]))).
+word_semantics(ghe, noun_common, lambda(x, pred(ghe, [x]))).
+word_semantics(phuong_tien, noun_common, lambda(x, pred(phuong_tien, [x]))).
+
+% Place types
+word_semantics(nha, noun_common, lambda(x, pred(nha, [x]))).
+word_semantics(phong_khach, noun_common, lambda(x, pred(phong_khach, [x]))).
+word_semantics(vuon, noun_common, lambda(x, pred(vuon, [x]))).
+word_semantics(noi, noun_common, lambda(x, pred(dia_diem, [x]))).
+word_semantics(dia_diem, noun_common, lambda(x, pred(dia_diem, [x]))).
+
+% Plant types
 word_semantics(hoa, noun_common, lambda(x, pred(hoa, [x]))).
 
-% Relationship nouns
-word_semantics(em_gai, noun_relation, lambda(p, app(p, const(em_gai)))).
+% Other
+word_semantics(do_vat, noun_common, lambda(x, pred(do_vat, [x]))).
+word_semantics(mon_qua, noun_common, lambda(x, pred(qua_tang, [x]))).
+word_semantics(ten, noun_common, lambda(x, pred(ten, [x]))).
+word_semantics(bong, noun_common, lambda(x, pred(bong, [x]))).
+
+% Relationship nouns - 2-place predicates
+% em_gai(X, Y) means "X is younger sister of Y"
+% Usage: "Linh là em gái của Nhân" → em_gai(linh, nhan)
+word_semantics(em_gai, noun_relation, lambda(y, lambda(x, pred(em_gai, [x, y])))).
 
 % ========================================
 % CLASSIFIERS (Loại từ)
@@ -296,18 +306,31 @@ word_semantics(o, preposition,
 
 % ========================================
 % 11. TỪ ĐỂ HỎI (WH-WORDS)
-% Kiểu đặc biệt cho câu hỏi
+% Lambda semantics theo Slide-DOAN-01
 % ========================================
 
-% "Ai" - Who question
-word_semantics(ai, wh_word, wh(who)).
+% "Ai" - Who question (Subject position)
+% Kiểu: (e→t) → t
+% Format: λVP. wh_question(who, VP@_)
+% Khi áp dụng vào VP, ta được câu hỏi với placeholder cho subject
+word_semantics(ai, wh_word, 
+    lambda(vp, wh_question(who, app(vp, const(_))))).
 
-% "Gì" - What question  
-word_semantics(gi, wh_word, wh(what)).
+% "Gì" - What question (Object position)
+% Kiểu: ((e→t)→t) (như một NP bình thường)
+% Format: λP. wh_question(what, P@_)
+% Được dùng như object của động từ ngoại động
+word_semantics(gi, wh_word, 
+    lambda(p, wh_question(what, app(p, const(_))))).
 
 % "Đâu", "Ở đâu" - Where question
-word_semantics(dau, wh_word, wh(where)).
-word_semantics(o_dau, wh_word, wh(where)).
+% Kiểu: (e→t) → t
+% Format: λVP. wh_question(where, VP@_)
+word_semantics(dau, wh_word, 
+    lambda(vp, wh_question(where, app(vp, const(_))))).
+
+word_semantics(o_dau, wh_word, 
+    lambda(vp, wh_question(where, app(vp, const(_))))).
 
 % "Nào" - Which question
 word_semantics(nao, wh_word, wh(which)).
