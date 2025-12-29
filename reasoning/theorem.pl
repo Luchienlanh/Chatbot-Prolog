@@ -269,16 +269,29 @@ find_values(wh_question(where, pred(vi_tri, [Subject, _])), Values) :- !,
 
 % --- WHAT RELATION: "NP là gì của NP" → find predicate name ---
 % Example: "Linh là gì của Nhân?" → wh_question(what_relation, pred(Rel, [linh, nhan]))
+% Filter: Only accept valid kinship/social relationships, exclude situational acts like song_cung
 find_values(wh_question(what_relation, pred(RelationVar, [Subj, Obj])), Values) :- 
     nonvar(Subj), nonvar(Obj), !,
     strip_const(Subj, SSubj),
     strip_const(Obj, SObj),
     findall(Relation,
         ( repository:fact(pred(Relation, [SSubj, SObj])),
-          Relation \= unknown
+          Relation \= unknown,
+          is_valid_relationship(Relation)
         ),
         RawValues),
     sort(RawValues, Values).
+
+% Helper: Check valid relationships
+is_valid_relationship(em_gai).
+is_valid_relationship(anh_trai).
+is_valid_relationship(chi_gai).
+is_valid_relationship(bo).
+is_valid_relationship(me).
+is_valid_relationship(ban).
+is_valid_relationship(vo).
+is_valid_relationship(chong).
+% Add other relationships here as needed
 
 % --- Fallback ---
 find_values(wh_question(_, _), []).
