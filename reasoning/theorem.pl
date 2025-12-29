@@ -267,6 +267,19 @@ find_values(wh_question(where, Subject), Values) :-
 find_values(wh_question(where, pred(vi_tri, [Subject, _])), Values) :- !,
     find_values(wh_question(where, Subject), Values).
 
+% --- WHAT RELATION: "NP là gì của NP" → find predicate name ---
+% Example: "Linh là gì của Nhân?" → wh_question(what_relation, pred(Rel, [linh, nhan]))
+find_values(wh_question(what_relation, pred(RelationVar, [Subj, Obj])), Values) :- 
+    nonvar(Subj), nonvar(Obj), !,
+    strip_const(Subj, SSubj),
+    strip_const(Obj, SObj),
+    findall(Relation,
+        ( repository:fact(pred(Relation, [SSubj, SObj])),
+          Relation \= unknown
+        ),
+        RawValues),
+    sort(RawValues, Values).
+
 % --- Fallback ---
 find_values(wh_question(_, _), []).
 
