@@ -228,6 +228,11 @@ fact(pred(nam_ngu, [miu, ghe_go])).
 fact(pred(vi_tri, [ghe_go, phong_khach])).
 fact(pred(vi_tri, [miu, ghe_go])).
 fact(pred(vi_tri, [miu, phong_khach])).  % Inferred via transitivity
+fact(pred(vi_tri, [cac_bong_hoa, khu_vuon])).
+fact(pred(vi_tri, [khu_vuon, nha_nhan_linh])).  % Khu vườn ở sau nhà
+
+% Living location
+fact(pred(song_tai, [nhan, ngoai_o])).  % Nhân sống tại ngoại ô  % Inferred via transitivity
 
 % 10. Nhân thường cho Miu ăn và chơi với Miu.
 fact(pred(cho_an, [nhan, miu])).

@@ -7,15 +7,15 @@
 
 % --- Location Questions ---
 test_case('nq1', where, "Miu ở đâu?").
-test_case('nq2', where, "Khu vườn ở đâu?").
+test_case('nq2', where, "Khu vườn ở đâu?"). ## 3
 
 % --- Ownership Questions ---
-test_case('nq3', who, "Xe đạp là của ai?").
+test_case('nq3', who, "Xe đạp là của ai?"). ## 2
 test_case('nq4', who, "Ai sở hữu xe đạp?").
 
 % --- Relationship Questions ---
 test_case('nq6', who, "Ai là em gái của Nhân?").
-test_case('nq7', what, "Linh là gì của Nhân?").
+test_case('nq7', what, "Linh là gì của Nhân?"). ## 1
 test_case('nq8', who, "Ai sống cùng Linh?").
 
 % --- Action/Preference Questions ---
@@ -30,8 +30,8 @@ test_case('nq13', who, "Ai thích ngắm hoa?").
 test_case('nq14', yn, "Linh thích xe đạp phải không?").
 test_case('nq15', yn, "Nhân tặng Linh xe đạp phải không?"). % Expect No (Dad gave it)
 test_case('nq16', yn, "Miu ngủ trong phòng khách phải không?").
-test_case('nq17', yn, "Khu vườn ở sau nhà phải không?").
-test_case('nq18', yn, "Nhân sống tại ngoại ô phải không?").
+test_case('nq17', yn, "Khu vườn ở sau nhà phải không?"). ## 4 
+test_case('nq18', yn, "Nhân sống tại ngoại ô phải không?"). ## 5
 test_case('nq19', yn, "Mot chiec xe mau xanh. No la cua Linh?").
 test_case('nq20', yn, "Linh co mot con meo. No ten la Miu?").
 test_case('nq21', yn, "Nguoi cho Miu an. Do la Nhan?").

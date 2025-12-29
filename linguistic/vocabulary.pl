@@ -114,6 +114,20 @@ word_semantics(con, classifier, lambda(x, x)).
 word_semantics(cai, classifier, lambda(x, x)).
 
 % ========================================
+% WH-WORDS (Từ nghi vấn)
+% Kiểu: Take predicate, wrap in wh_question
+% ========================================
+
+% "ai" (who) - for persons
+word_semantics(ai, wh_word, lambda(p, wh_question(who, app(p, const(_))))).
+
+% "gì" (what) - for things/objects
+word_semantics(gi, wh_word, lambda(p, wh_question(what, app(p, const(_))))).
+
+% "đâu" (where) - for locations  
+word_semantics(dau, wh_word, lambda(p, wh_question(where, app(p, const(_))))).
+
+%========================================
 % 3. ĐỘNG TỪ NỘI ĐỘNG (INTRANSITIVE VERBS)
 % Kiểu: e→t
 % Format: λX. động_từ(X)
@@ -314,23 +328,23 @@ word_semantics(o, preposition,
 % Format: λVP. wh_question(who, VP@_)
 % Khi áp dụng vào VP, ta được câu hỏi với placeholder cho subject
 word_semantics(ai, wh_word, 
-    lambda(vp, wh_question(who, app(vp, const(_))))).
+    lambda(vp, wh_question(who, app(vp, x)))).
 
 % "Gì" - What question (Object position)
 % Kiểu: ((e→t)→t) (như một NP bình thường)
 % Format: λP. wh_question(what, P@_)
 % Được dùng như object của động từ ngoại động
 word_semantics(gi, wh_word, 
-    lambda(p, wh_question(what, app(p, const(_))))).
+    lambda(p, wh_question(what, app(p, x)))).
 
 % "Đâu", "Ở đâu" - Where question
 % Kiểu: (e→t) → t
 % Format: λVP. wh_question(where, VP@_)
 word_semantics(dau, wh_word, 
-    lambda(vp, wh_question(where, app(vp, const(_))))).
+    lambda(vp, wh_question(where, app(vp, x)))).
 
 word_semantics(o_dau, wh_word, 
-    lambda(vp, wh_question(where, app(vp, const(_))))).
+    lambda(vp, wh_question(where, app(vp, x)))).
 
 % "Nào" - Which question
 word_semantics(nao, wh_word, wh(which)).

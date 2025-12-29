@@ -112,6 +112,16 @@ compose(tree(sbarq, [WH, VP]), Semantics) :-
     beta_reduce_full(RawSem, Semantics).
 
 % SBARQ → NP VP[+wh] (Linh thích gì?, Mèo tên gì?)
+% SBARQ with BARE COMMON NOUN subject - resolve to constant
+% "Xe đạp là của ai?" where subject is bare "xe_dap"
+compose(tree(sbarq, [tree(np, [tree(nn, [word(NounWord, noun_common)])]), VP]), Semantics) :- !,
+    find_constant_of_type(NounWord, Constant),
+    NPSem = lambda(p, app(p, const(Constant))),
+    compose(VP, VPSem),
+    RawSem = app(NPSem, VPSem),
+    beta_reduce_full(RawSem, Semantics).
+
+% SBARQ with WH-word in VP
 % VP chứa WH-word ở object position
 % Áp dụng: ||NP|| @ ||VP||
 % Where ||NP|| = λP. P@linh
@@ -124,13 +134,13 @@ compose(tree(sbarq, [NP, VP]), Semantics) :-
     RawSem = app(NPSem, VPSem),
     beta_reduce_full(RawSem, Semantics).
 
-% SBARQ fallback - Pure compositional (NP VP)
-% All other SBARQ cases handled by general lambda composition
+% SBARQ fallback% SBARQ - Pure compositional approach
+% All cases: NPSem @ VPSem (function application)
 compose(tree(sbarq, [NP, VP]), Semantics) :- !,
     compose(NP, NPSem),
     compose(VP, VPSem),
     RawSem = app(NPSem, VPSem),
-    beta_reduce_full(RawSem, Semantics).
+    beta_reduce_full(RawSem, Semantics).   % Fully reduce!a_reduce_full(RawSem, Semantics).
 
 
 % SBARQ mặc định
@@ -271,28 +281,34 @@ compose(tree(vp_serial, [VB1, VB2, NP]), Semantics) :- !,
     RawSem = app(VB1Sem, lambda(p, app(p, InnerReduced))),
     beta_reduce_full(RawSem, Semantics).
 
-% VP_COPULA -> VB-copula NP (là em gái)
+% VP_COPULA -> VB-copula WP PP (là gì của Nhân) - SPECIFIC, must be first!
+% "Linh là gì của Nhân?" → wh_question(what_relation, relation(linh, _, nhan))
+compose(tree(vp_copula, [_VB, tree(wp, [word(gi, wh_word)]), PP]), Semantics) :- !,
+    extract_entity_from_pp(PP, Target),
+    Semantics = lambda(x, wh_question(what_relation, pred(_, [x, Target]))).
+
+% VP_COPULA -> VB-copula PP with WH (là của ai) - SPECIFIC, must be first!
+% "Xe đạp là của ai?" → wh_question(who, so_huu(_, xe_dap))
+compose(tree(vp_copula, [_VB, tree(pp, [tree(p, [word(cua, _)]), tree(np, [tree(wp, [word(ai, wh_word)])])])]), Semantics) :- !,
+    Semantics = lambda(x, wh_question(who, pred(so_huu, [const(_), x]))).
+
+% VP_COPULA -> VB-copula NP (là em gái) - GENERAL
 compose(tree(vp_copula, [_VB, NP]), Semantics) :- !,
     compose(NP, NPSem),
     Semantics = NPSem.
 
-% VP_COPULA -> VB-copula PP (là của Linh)
+% VP_COPULA -> VB-copula PP (là của Linh) - GENERAL  
 compose(tree(vp_copula, [_VB, PP]), Semantics) :- !,
     compose(PP, PPSem),
     Semantics = PPSem.
 
-% VP_COPULA -> VB-copula NP PP (là em gái của Nhân)
+% VP_COPULA -> VB-copula NP PP (là em gái của Nhân) - GENERAL
 compose(tree(vp_copula, [_VB, NP, PP]), Semantics) :- !,
     compose(NP, NPSem),
     compose(PP, PPSem),
     extract_entity(NPSem, Relation),
     extract_entity_from_pp(PP, Target),
     Semantics = lambda(x, pred(Relation, [x, Target])).
-
-% VP_COPULA -> VB-copula WP PP (là gì của Nhân)
-compose(tree(vp_copula, [_VB, tree(wp, _), PP]), Semantics) :- !,
-    extract_entity_from_pp(PP, Target),
-    Semantics = wh_relation(Target).
 
 % -------------------------------------------
 % PP - PREPOSITIONAL PHRASE
@@ -458,6 +474,12 @@ word_to_pred(W, W).
 
 beta_reduce(app(lambda(Var, Body), Arg), Result) :- !,
     substitute(Var, Arg, Body, Result).
+
+% Beta reduce: const @ lambda → lambda @ const (symmetric application)
+% Handles: "Khu vườn ở đâu" where (λP.P(khu_vuon)) reduces to const(khu_vuon)
+% Then: app(const(khu_vuon), lambda(x, ...)) → apply lambda to const
+beta_reduce(app(const(C), lambda(Var, Body)), Result) :- !,
+    substitute(Var, const(C), Body, Result).
 
 beta_reduce(lambda(Var, Body), lambda(Var, RBody)) :- !,
     beta_reduce(Body, RBody).
