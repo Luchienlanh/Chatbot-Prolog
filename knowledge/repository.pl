@@ -5,6 +5,7 @@
 
 :- module(repository, [
     fact/1,
+    rule/2,
     entity/2,
     constant/2,
     predicate/2,
@@ -18,7 +19,16 @@
 ]).
 
 :- dynamic fact/1.
+:- dynamic rule/2.
 :- dynamic entity/2.
+
+% ========================================
+% INFERENCE RULES
+% Format: rule(Head, BodyList)
+% ========================================
+
+% X là của Y nếu Y sở hữu X
+rule(pred(cua, [Obj, Owner]), [pred(so_huu, [Owner, Obj])]).
 
 % ========================================
 % CONSTANTS (Hằng) - Proper Names + Descriptive Object Names
@@ -112,6 +122,9 @@ predicate(phia_sau, 2).   % phia_sau(X, Y): X ở phía sau Y
 predicate(tang, 3).       % tang(X, Y, Z): X tặng Z cho Y
 predicate(cho, 3).        % cho(X, Y, Z): X chở Y đến Z
 
+% --- GENDER ATTRIBUTE (For Coreference Resolution) ---
+predicate(gender, 2).     % gender(Entity, Gender): male, female, neutral
+
 % ========================================
 % KIỂM TRA BIỂU THỨC HỢP LỆ - Section 2.3 Report
 % ========================================
@@ -187,6 +200,19 @@ fact(pred(nguoi, [bo_nhan])).
 fact(pred(meo, [miu])).
 fact(pred(dong_vat, [miu])).
 fact(pred(thu_cung, [miu])).
+
+% --- GENDER FACTS ---
+fact(pred(gender, [nhan, male])).
+fact(pred(gender, [linh, female])).
+fact(pred(gender, [bo_nhan, male])).
+fact(pred(gender, [nam, male])).
+fact(pred(gender, [binh, male])).
+fact(pred(gender, [ly, male])).
+fact(pred(gender, [miu, neutral])).
+fact(pred(gender, [xe_dap_nhan, neutral])).
+fact(pred(gender, [nha_nhan_linh, neutral])).
+fact(pred(gender, [cac_bong_hoa, neutral])).
+fact(pred(gender, [khu_vuon, neutral])).
 
 % --- STORY FACTS ---
 

@@ -1,48 +1,65 @@
+% ========================================
+% QUERIES CS229 - CÂU HỎI THEO FORMAT SLIDES
+% ========================================
+%
+% Theo Slide-DOAN-01, Trang 12-14:
+%
+% DẠNG CÂU HỎI ĐƯỢC HỖ TRỢ:
+% 1. Who: "Ai thích X?" → Vị_từ(?, X)
+% 2. What: "X thích gì?" → Vị_từ(X, ?)
+% 3. Yes/No (đa câu): "Một chiếc xe tốt. Nó là của Bình?" → đồng sở chỉ
+%
+% QUAN HỆ VÀ CONSTANTS CÓ TRONG KNOWLEDGE BASE:
+% Constants: nhan, linh, miu, bo_nhan, xe_dap_nhan, cac_bong_hoa, khu_vuon
+% Relations: thich/2, so_huu/2, cho_an/2, song_cung/2, choi_voi/2, ngam/2
+%
+% ========================================
 
 :- encoding(utf8).
 :- consult('bootstrap.pl').
 
-% Define test cases based on CS229 dataset
-% Focusing on direct questions about the story without context preambles.
+% ========================================
+% CÂU HỎI DẠNG WHO (Slide-DOAN-01, Trang 12)
+% Pattern: Ai + VP => Vị_từ(X, a)
+% ========================================
 
-% --- Location Questions ---
-test_case('nq1', where, "Miu ở đâu?").
-test_case('nq2', where, "Khu vườn ở đâu?"). ## 3
+% Sử dụng proper nouns (constants) từ KB
+test_case('who1', who, "Ai thich Miu?").           % thich(?, miu) -> ?
+test_case('who2', who, "Ai cho Miu an?").          % cho_an(?, miu) -> [nhan]
+test_case('who3', who, "Ai choi voi Miu?").        % choi_voi(?, miu) -> [nhan]
+test_case('who4', who, "Ai song cung Linh?").      % song_cung(?, linh) -> [nhan]     % song_cung(?, nhan) -> [linh]
 
-% --- Ownership Questions ---
-test_case('nq3', who, "Xe đạp là của ai?"). ## 2
-test_case('nq4', who, "Ai sở hữu xe đạp?").
+% ========================================
+% CÂU HỎI DẠNG WHAT (Slide-DOAN-01, Trang 12)
+% Pattern: NP + VP + gì? => Vị_từ(a, X)
+% ========================================
 
-% --- Relationship Questions ---
-test_case('nq6', who, "Ai là em gái của Nhân?").
-test_case('nq7', what, "Linh là gì của Nhân?"). ## 1
-test_case('nq8', who, "Ai sống cùng Linh?").
+test_case('what1', what, "Linh thich gi?").        % thich(linh, ?) -> [xe_dap_nhan, cac_bong_hoa, khu_vuon]
+test_case('what2', what, "Linh ngam gi?").         % ngam(linh, ?) -> [cac_bong_hoa]       % so_huu(linh, ?) -> [miu]
 
-% --- Action/Preference Questions ---
-test_case('nq9', who, "Ai cho Miu ăn?").
-test_case('nq10', who, "Ai chơi với Miu?").
-test_case('nq11', what, "Linh thích gì?").
-test_case('nq12', what, "Linh ngắm gì?").
-test_case('nq13', who, "Ai thích ngắm hoa?").
+% ========================================
+% CÂU HỎI DẠNG YES/NO - ĐA CÂU (Slide-DOAN-01, Trang 5)
+% Pattern: "Một X tốt. Nó là của Y?" → đồng sở chỉ
+% ========================================
 
+% Format đa câu với đồng sở chỉ
+test_case('yn1', yn, "Mot con meo. No la cua Linh?").
+test_case('yn2', yn, "Mot chiec xe dap. No la cua Nhan?").
+test_case('yn3', yn, "Linh thích ngắm xe đạp?").
+test_case('yn4', yn, "Linh thích hoa?").
+test_case('yn5', yn, "Nhan so huu xe dap?").
+test_case('yn6', yn, "Nhan song cung Linh?").
+test_case('yn7', yn, "Nhan song cung Nhan?").
 
-% --- Yes/No Questions ---
-test_case('nq14', yn, "Linh thích xe đạp phải không?").
-test_case('nq15', yn, "Nhân tặng Linh xe đạp phải không?"). % Expect No (Dad gave it)
-test_case('nq16', yn, "Miu ngủ trong phòng khách phải không?").
-test_case('nq17', yn, "Khu vườn ở sau nhà phải không?"). ## 4 
-test_case('nq18', yn, "Nhân sống tại ngoại ô phải không?"). ## 5
-test_case('nq19', yn, "Mot chiec xe mau xanh. No la cua Linh?").
-test_case('nq20', yn, "Linh co mot con meo. No ten la Miu?").
-test_case('nq21', yn, "Nguoi cho Miu an. Do la Nhan?").
-test_case('nq22', yn, "Linh thich ngam hoa. Chung o trong vuon?").
+% ========================================
+% MAIN EXECUTION
+% ========================================
 
-% Main execution loop
 run_all_tests :-
     initialize,
     nl,
     writeln('========================================'),
-    writeln('STARTING CS229 QUERY SUITE'),
+    writeln('CS229 QUERY SUITE - THEO SLIDES'),
     writeln('========================================'),
     nl,
     findall(test(Id, Type, Text), test_case(Id, Type, Text), Tests),
@@ -58,8 +75,18 @@ run_tests_list([test(Id, Type, Text)|Rest]) :-
     format('~n--------------------------------------------------------------------------------~n', []),
     format('TEST [~w] Type: ~w~n', [Id, Type]),
     format('Question: ~s~n', [Text]),
-    ( catch(query(Text, Type), Error, format('ERROR in test ~w: ~w~n', [Id, Error]))
+    ( catch(query(Text, Type), Error, format('ERROR: ~w~n', [Error]))
     -> true
-    ;  format('FAILURE in test ~w: query returned false~n', [Id])
+    ;  format('FAILURE: query returned false~n', [])
     ),
     run_tests_list(Rest).
+
+% Run single test
+run_test(Id) :-
+    initialize,
+    test_case(Id, Type, Text),
+    format('TEST [~w] Type: ~w~n', [Id, Type]),
+    format('Question: ~s~n', [Text]),
+    query(Text, Type).
+% Negation Test
+test_case('neg1', yn, "Linh khong thich hoa?").

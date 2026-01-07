@@ -73,6 +73,7 @@ initialize :-
 % query(Question, Type) - Type: yn, who, what, where
 % ========================================
 
+
 query(Question, Type) :-
     discourse:init_discourse,
     writeln(''),
@@ -111,11 +112,14 @@ query(Question, Type) :-
         fail
     ),
     
-    % Stage 4: DRS Construction
+    % Stage 4: DRS Construction & Resolution
     write('Stage 4: DRS Construction... '),
-    ( discourse:build_drs(Lambda, DRS) ->
+    ( discourse:build_drs(Lambda, RawDRS) ->
+        % Resolve Coreference
+        discourse:resolve_drs(RawDRS, DRS),
         writeln('OK'),
-        format('   DRS: ~w~n', [DRS])
+        format('   DRS (Raw): ~w~n', [RawDRS]),
+        format('   DRS (Resolved): ~w~n', [DRS])
     ;
         writeln('FAILED'),
         fail
@@ -156,9 +160,9 @@ answer_question(yn, FOL) :-
         writeln('========================================')
     ).
 
-% Who question
+% Who question - FOL thuần túy, không có wh_question wrapper
 answer_question(who, FOL) :-
-    theorem:find_entities(FOL, Entities),
+    theorem:find_entities(who, FOL, Entities),
     writeln('OK'),
     nl,
     writeln('========================================'),
@@ -169,9 +173,9 @@ answer_question(who, FOL) :-
     ),
     writeln('========================================').
 
-% What question
+% What question - FOL thuần túy
 answer_question(what, FOL) :-
-    theorem:find_values(FOL, Values),
+    theorem:find_values(what, FOL, Values),
     writeln('OK'),
     nl,
     writeln('========================================'),
@@ -182,9 +186,9 @@ answer_question(what, FOL) :-
     ),
     writeln('========================================').
 
-% Where question
+% Where question - FOL thuần túy
 answer_question(where, FOL) :-
-    theorem:find_values(FOL, Values),
+    theorem:find_values(where, FOL, Values),
     writeln('OK'),
     nl,
     writeln('========================================'),

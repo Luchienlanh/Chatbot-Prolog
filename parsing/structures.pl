@@ -133,6 +133,11 @@ sq(tree(sq, [NP, VP, QM])) -->
     [phai],
     qm(QM).
 
+% SQ -> NP VP (Intonation question / Missing marker)
+sq(tree(sq, [NP, VP])) -->
+    np(NP),
+    vp(VP).
+
 % ========================================
 % SBARQ - CÂU HỎI WH
 % ========================================
@@ -189,10 +194,19 @@ np(tree(np, [WRB])) -->
 np(tree(np, [PN])) -->
     pn(PN).
 
+% NP -> PN DT (Anh ấy)
+np(tree(np, [PN, DT])) -->
+    pn(PN),
+    dt(DT).
+
 % NP -> DT NN (Determiner + Noun)
 np(tree(np, [DT, NN])) -->
     dt(DT),
     nn(NN).
+
+% ... (keep rest)
+
+
 
 % NP -> DT CL NN (Một con mèo)
 np(tree(np, [DT, CL, NN])) -->
@@ -232,6 +246,11 @@ np_no_wh(tree(np, [NN])) -->
 % ========================================
 % VP - VERB PHRASE
 % ========================================
+
+% VP -> ADV_NEG VP (Phủ định: không ngủ)
+vp(tree(vp_neg, [ADV, VP])) -->
+    adv_neg(ADV),
+    vp(VP).
 
 % VP -> VB (Intransitive)
 vp(tree(vp, [VB])) -->
@@ -323,8 +342,6 @@ adj_phrase(tree(adjp, [tree(nn, [word(mau, noun_common)]), ADJ])) -->
 
 compound_noun(tree(nnp, [word(xe_dap_nhan, noun_proper)])) --> [xe_dap_nhan].
 compound_noun(tree(nnp, [word(nha_nhan_linh, noun_proper)])) --> [nha_nhan_linh].
-compound_noun(tree(nnp, [word(khu_vuon, noun_proper)])) --> [khu_vuon].
-compound_noun(tree(nnp, [word(khu_vuon, noun_proper)])) --> [khu, vuon].
 compound_noun(tree(nnp, [word(cac_bong_hoa, noun_proper)])) --> [cac_bong_hoa].
 compound_noun(tree(nnp, [word(em_gai, noun_common)])) --> [em, gai].
 
@@ -385,6 +402,9 @@ adj(tree(adj, [word(W, adjective)])) --> [W], {is_adjective(W)}.
 % QM - Question Marker
 qm(tree(qm, [word(W, qm)])) --> [W], {is_question_marker(W)}.
 
+% ADV_NEG - Negation Adverb
+adv_neg(tree(adv_neg, [word(W, adv_neg)])) --> [W], {is_negation(W)}.
+
 % ========================================
 % LEXICON (Từ điển)
 % ========================================
@@ -400,6 +420,9 @@ is_proper_noun(cac_bong_hoa).
 is_proper_noun(truong).
 is_proper_noun(ngoai_o).
 is_proper_noun(xanh).
+is_proper_noun(ly).    % Lý (từ ví dụ slides)
+is_proper_noun(nam).   % Nam
+is_proper_noun(binh).  % Bình
 
 % Common nouns - Type predicates
 is_common_noun(nguoi).
@@ -411,11 +434,17 @@ is_common_noun(ghe).
 is_common_noun(nha).
 is_common_noun(phong_khach).  % Type predicate!
 is_common_noun(vuon).  % Type predicate!
+is_common_noun(khu_vuon).  % Type predicate!
 is_common_noun(sau_nha).  % Location
 is_common_noun(ten).
 is_common_noun(em_gai).
 is_common_noun(bong).
 is_common_noun(hoa).  % Type predicate!
+is_common_noun(cho).  % Common noun version
+is_common_noun(but).
+is_common_noun(cay_but).
+is_common_noun(vo).
+is_common_noun(quyen_vo).
 
 % Intransitive verbs
 is_intrans_verb(ngu).
@@ -434,6 +463,9 @@ is_trans_verb(ngam).
 is_trans_verb(choi).
 is_trans_verb(choi_voi).
 is_trans_verb(co).
+is_trans_verb(quen).   % Thêm mới
+is_trans_verb(an).     % Thêm mới
+is_trans_verb(can).    % Thêm mới
 
 % Transitive verbs that take PP
 is_trans_pp_verb(song).
@@ -462,6 +494,7 @@ is_determiner(mot).
 is_determiner(moi).
 is_determiner(cac).
 is_determiner(nhung).
+is_determiner(ay).
 
 % Classifiers
 is_classifier(chiec).
@@ -472,9 +505,9 @@ is_classifier(bong).
 % Pronouns
 is_pronoun(no).
 is_pronoun(do).
-is_pronoun(chung).  % chúng (plural they/them)
-is_pronoun(anh_ay).
-is_pronoun(co_ay).
+is_pronoun(chung).
+is_pronoun(anh).
+is_pronoun(co).
 
 % Prepositions
 is_preposition(trong).
@@ -492,7 +525,10 @@ is_adjective(lon).
 is_adjective(dep).
 
 % Question markers
-is_question_marker(khong).
 is_question_marker(phai_khong).
 is_question_marker(chua).
+is_question_marker(khong).
+
+% Negation
+is_negation(khong).
 

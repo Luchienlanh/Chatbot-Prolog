@@ -16,12 +16,16 @@
     prove/1,
     prove_with_trace/1,
     find_entities/2,
+    find_entities/3,  % find_entities(QueryType, FOL, Entities) - FOL thuần túy
     find_values/2,
+    find_values/3,    % find_values(QueryType, FOL, Values) - FOL thuần túy
     initialize_prover/0
 ]).
 
 :- discontiguous find_entities/2.
+:- discontiguous find_entities/3.
 :- discontiguous find_values/2.
+:- discontiguous find_values/3.
 
 :- use_module('../knowledge/repository').
 
@@ -54,11 +58,22 @@ prove(true) :- !.
 % false luôn sai
 prove(false) :- !, fail.
 
+% Equality check
+prove(X = Y) :- !, X = Y.
+
 % pred(P, Args) - Kiểm tra trong knowledge base
 % Strip const() wrapper trước khi tìm
 prove(pred(P, Args)) :- 
     strip_const_args(Args, StrippedArgs),
-    repository:fact(pred(P, StrippedArgs)).
+    ( repository:fact(pred(P, StrippedArgs))
+    ; repository:rule(pred(P, StrippedArgs), Body),
+      prove_rule_body(Body)
+    ).
+
+prove_rule_body([]).
+prove_rule_body([Cond|Conds]) :-
+    prove(Cond),
+    prove_rule_body(Conds).
 
 % Inference rules
 % vi_tri(X, Y) :- chua(Y, X). (Garden contains flowers -> flowers in garden)
@@ -129,8 +144,22 @@ substitute_in_body(Var, Value, or(A, B), or(NA, NB)) :- !,
 substitute_in_body(Var, Value, neg(A), neg(NA)) :- !,
     substitute_in_body(Var, Value, A, NA).
 
+substitute_in_body(Var, Value, exists(V, B), exists(V, NB)) :- !,
+    ( Var == V -> NB = B  % Shadowing: don't substitute if variable is shadowed
+    ; substitute_in_body(Var, Value, B, NB)
+    ).
+
+substitute_in_body(Var, Value, forall(V, B), forall(V, NB)) :- !,
+    ( Var == V -> NB = B
+    ; substitute_in_body(Var, Value, B, NB)
+    ).
+
 substitute_in_body(Var, Value, pred(P, Args), pred(P, NewArgs)) :- !,
     maplist(substitute_arg(Var, Value), Args, NewArgs).
+
+substitute_in_body(Var, Value, A=B, NA=NB) :- !,
+    substitute_arg(Var, Value, A, NA),
+    substitute_arg(Var, Value, B, NB).
 
 substitute_in_body(_, _, X, X).
 
@@ -149,10 +178,103 @@ prove_forall(Var, Body) :-
     ).
 
 % ========================================
-% FIND ENTITIES - TÌM ENTITY CHO CÂU HỎI WHO
+% FIND_ENTITIES/3 và FIND_VALUES/3 - FOL THUẦN TÚY
+% Query type được truyền từ input của người dùng
+% FOL không có wh_question wrapper - theo đúng format thầy
 % ========================================
 
-% --- WHO với lambda và app: lambda(x, app(VPSem, x)) ---
+% --- WHO: find_entities(who, FOL, Entities) ---
+% Query type = who => tìm subject (argument thứ 1)
+% FOL: exists(..., pred(Predicate, [QueryVar, Object]))
+find_entities(who, FOL, Entities) :-
+    extract_innermost_pred(FOL, pred(Pred, [_, Object])),
+    strip_const(Object, StrippedObj),
+    findall(Entity,
+        repository:fact(pred(Pred, [Entity, StrippedObj])),
+        RawEntities),
+    sort(RawEntities, Entities).
+
+% Fallback cho WHO
+find_entities(who, _, []).
+
+% --- WHAT: find_values(what, FOL, Values) ---
+% Query type = what => tìm object (argument thứ 2)  
+% FOL: exists(..., pred(Predicate, [Subject, QueryVar]))
+find_values(what, FOL, Values) :-
+    extract_innermost_pred(FOL, pred(Pred, [Subject, _])),
+    strip_const(Subject, StrippedSubj),
+    findall(Value,
+        repository:fact(pred(Pred, [StrippedSubj, Value])),
+        RawValues),
+    sort(RawValues, Values).
+
+% Fallback cho WHAT
+find_values(what, _, []).
+
+% --- WHERE: find_values(where, FOL, Values) ---
+find_values(where, FOL, Values) :-
+    find_values(what, FOL, Values).
+
+% Fallback cho WHERE  
+find_values(where, _, []).
+
+% ========================================
+% HELPER: Trích xuất thông tin
+% Query type đã biết từ query(_, Type) => chỉ cần tìm biến trong FOL
+% ========================================
+
+% Extract predicate and find the query variable 
+% FOL format: exists(..., pred(Name, [Arg1, Arg2]))
+extract_wh_query_info(FOL, Pred, QueryVar) :-
+    extract_innermost_pred(FOL, pred(Pred, Args)),
+    % Tìm biến (không phải constant)
+    member(Arg, Args),
+    (var(Arg) ; \+ is_known_constant(Arg)),
+    QueryVar = Arg, !.
+
+extract_innermost_pred(exists(_, Body), Pred) :- !,
+    extract_innermost_pred(Body, Pred).
+extract_innermost_pred(pred(P, Args), pred(P, Args)) :- !.
+extract_innermost_pred(and(A, _), Pred) :- 
+    extract_innermost_pred(A, Pred), !.
+extract_innermost_pred(and(_, B), Pred) :- 
+    extract_innermost_pred(B, Pred).
+
+% Check if constant  
+is_known_constant(C) :- 
+    atom(C),
+    (repository:constant(C, _) ; repository:entity(C, _)), !.
+
+% --- WHO format mới: wh_question(who, QueryVar, Body) ---
+% FOL Body có dạng: exists(Object, so_huu(QueryVar, Object))
+% Tìm tất cả Entities sao cho so_huu(Entity, Object) đúng
+find_entities(wh_question(who, QueryVar, Body), Entities) :- 
+    nonvar(QueryVar), !,
+    % Trích xuất predicate và object từ Body
+    extract_pred_object_from_body(Body, Pred, Object),
+    strip_const(Object, StrippedObj),
+    findall(Entity,
+        repository:fact(pred(Pred, [Entity, StrippedObj])),
+        RawEntities),
+    sort(RawEntities, Entities).
+
+% Helper: Trích xuất predicate và object từ FOL body cho WHO
+extract_pred_object_from_body(exists(Object, Rest), Pred, Object) :-
+    atom(Object), !,
+    extract_pred_from_inner_who(Rest, Pred).
+extract_pred_object_from_body(exists(_, Rest), Pred, Object) :- !,
+    extract_pred_object_from_body(Rest, Pred, Object).
+extract_pred_object_from_body(Pred, FuncName, _) :- 
+    Pred =.. [FuncName|_].
+
+extract_pred_from_inner_who(exists(_, Rest), Pred) :- !,
+    extract_pred_from_inner_who(Rest, Pred).
+extract_pred_from_inner_who(and(A, _), Pred) :- !,
+    extract_pred_from_inner_who(A, Pred).
+extract_pred_from_inner_who(Pred, Functor) :-
+    Pred =.. [Functor|_].
+
+% --- WHO với lambda và app: lambda(x, app(VPSem, x)) (format cũ) ---
 find_entities(wh_question(who, lambda(_X, app(VPSem, _))), Entities) :-
     nonvar(VPSem), !,
     extract_pred_and_object_from_lambda(VPSem, Pred, Object),
@@ -230,7 +352,35 @@ extract_pred_and_object_from_lambda(app(_, Inner), P, O) :- !,
 % FIND VALUES - TÌM GIÁ TRỊ CHO CÂU HỎI WHAT/WHERE
 % ========================================
 
-% --- WHAT: "NP V gì" → find object ---
+% --- WHAT format mới: wh_question(what, QueryVar, Body) ---
+% FOL Body có dạng: exists(Subject, exists(QueryVar, thich(Subject, QueryVar)))
+% Tìm tất cả Values sao cho thic(Subject, Value) đúng
+find_values(wh_question(what, QueryVar, Body), Values) :- 
+    nonvar(QueryVar), !,
+    % Trích xuất predicate và subject từ Body
+    extract_pred_subject_from_body(Body, Pred, Subject),
+    strip_const(Subject, StrippedSubj),
+    findall(Value,
+        repository:fact(pred(Pred, [StrippedSubj, Value])),
+        RawValues),
+    sort(RawValues, Values).
+
+% Helper: Trích xuất predicate và subject từ FOL body
+extract_pred_subject_from_body(exists(Subject, Rest), Pred, Subject) :-
+    atom(Subject), !,
+    extract_pred_from_inner(Rest, Pred).
+extract_pred_subject_from_body(exists(_, Rest), Pred, Subject) :- !,
+    extract_pred_subject_from_body(Rest, Pred, Subject).
+extract_pred_subject_from_body(Pred, Pred, _) :- atom(Pred).
+
+extract_pred_from_inner(exists(_, Rest), Pred) :- !,
+    extract_pred_from_inner(Rest, Pred).
+extract_pred_from_inner(and(A, _), Pred) :- !,
+    extract_pred_from_inner(A, Pred).
+extract_pred_from_inner(Pred, Functor) :-
+    Pred =.. [Functor|_].
+
+% --- WHAT: "NP V gì" → find object (format cũ) ---
 find_values(wh_question(what, pred(Pred, [Subject, _])), Values) :- 
     nonvar(Subject), !,
     strip_const(Subject, StrippedSubj),
@@ -270,7 +420,7 @@ find_values(wh_question(where, pred(vi_tri, [Subject, _])), Values) :- !,
 % --- WHAT RELATION: "NP là gì của NP" → find predicate name ---
 % Example: "Linh là gì của Nhân?" → wh_question(what_relation, pred(Rel, [linh, nhan]))
 % Filter: Only accept valid kinship/social relationships, exclude situational acts like song_cung
-find_values(wh_question(what_relation, pred(RelationVar, [Subj, Obj])), Values) :- 
+find_values(wh_question(what_relation, pred(_RelationVar, [Subj, Obj])), Values) :- 
     nonvar(Subj), nonvar(Obj), !,
     strip_const(Subj, SSubj),
     strip_const(Obj, SObj),

@@ -5,21 +5,20 @@
 %
 % Theo Slide-BUOI-10, 11:
 %
-% CẤU TRÚC DRS gồm 2 phần:
+% CẤU TRÚC DRS gồm 2 phần (Trang 26):
 %    drs(Referents, Conditions)
 %    - Referents: Danh sách các sở chỉ (biến, hằng)
 %    - Conditions: Danh sách các điều kiện (vị từ)
 %
-% Ký hiệu:
-%    {x, y, z}, {P(x), Q(x,y), ...}
+% Ký hiệu: {x, y, z}, {P(x), Q(x,y), ...}
 %
-% PHÉP KẾT HỢP DRS (⊕):
-%    A ⊕ B = drs(Ra ∪ Rb, Ca ∪ Cb)
-%    trong đó A = drs(Ra, Ca) và B = drs(Rb, Cb)
+% PHÉP KẾT HỢP DRS ⊕ (Trang 35):
+%    A ⊕ B = drs(DA ∪ DB, CA ∪ CB)
+%    trong đó A = drs(DA, CA) và B = drs(DB, CB)
 %
-% XÁC ĐỊNH ĐỒNG SỞ CHỈ:
-%    - Đại từ "nó" cần tìm tiền ngữ (antecedent)
-%    - Ưu tiên: vật gần nhất phù hợp về giới tính/số lượng
+% XÁC ĐỊNH ĐỒNG SỞ CHỈ (Trang 40):
+%    Cho Y là hồi chỉ, có thể thêm điều kiện Y=a
+%    vào tập điều kiện khi a là sở chỉ phù hợp
 %
 % ========================================
 
@@ -28,160 +27,219 @@
     merge_drs/3,
     negate_drs/2,
     pretty_print_drs/1,
-    simplify_drs/2,
     % Discourse context
     init_discourse/0,
     update_discourse/1,
-    resolve_pronoun/2,
-    get_discourse_entities/1
-]).
-
-:- use_module('../knowledge/repository').
+    resolve_coreference/3,
+    init_discourse/0,
+    update_discourse/1,
+    resolve_coreference/3,
+    get_discourse_entities/1,
+    resolve_drs/2]).
 
 % Dynamic predicates for discourse context
-:- dynamic discourse_entity/3.   % discourse_entity(Entity, Type, Features)
-:- dynamic discourse_order/2.    % discourse_order(Entity, Position) - thứ tự xuất hiện
+:- dynamic discourse_entity/2.   % discourse_entity(Entity, Position)
+:- dynamic discourse_position/1. % Current position counter
 
 % ========================================
 % KHỞI TẠO DISCOURSE CONTEXT
 % ========================================
 
 init_discourse :-
-    retractall(discourse_entity(_, _, _)),
-    retractall(discourse_order(_, _)).
+    retractall(discourse_entity(_, _)),
+    retractall(discourse_position(_)),
+    assertz(discourse_position(0)).
 
 % ========================================
 % CẬP NHẬT DISCOURSE CONTEXT
-% Thêm entity mới vào context để dùng cho anaphora resolution
+% Thêm entity mới vào context để dùng cho coreference resolution
+% Theo Slide-BUOI-10 Trang 40
 % ========================================
 
-update_discourse(entity(Entity, Type)) :-
-    ( discourse_order(_, MaxPos) ->
-        aggregate_all(max(P), discourse_order(_, P), MaxPos),
-        NewPos is MaxPos + 1
-    ;
-        NewPos = 1
-    ),
-    get_entity_features(Entity, Type, Features),
-    ( discourse_entity(Entity, _, _) ->
+update_discourse(Entity) :-
+    discourse_position(Pos),
+    NewPos is Pos + 1,
+    retract(discourse_position(Pos)),
+    assertz(discourse_position(NewPos)),
+    ( discourse_entity(Entity, _) -> 
         true  % Entity đã tồn tại
-    ;
-        assertz(discourse_entity(Entity, Type, Features)),
-        assertz(discourse_order(Entity, NewPos))
+    ; 
+        assertz(discourse_entity(Entity, NewPos))
     ).
-
-% Lấy đặc điểm của entity
-get_entity_features(Entity, person, features(third, singular, human)) :- 
-    repository:entity(Entity, person), !.
-get_entity_features(Entity, animal, features(third, singular, animate)) :- 
-    repository:entity(Entity, animal), !.
-get_entity_features(_, object, features(third, singular, inanimate)) :- !.
-get_entity_features(_, _, features(third, singular, any)).
 
 % Lấy tất cả entities trong discourse
 get_discourse_entities(Entities) :-
-    findall(E, discourse_entity(E, _, _), Entities).
+    findall(E, discourse_entity(E, _), Entities).
 
 % ========================================
-% XÁC ĐỊNH ĐỒNG SỞ CHỈ (ANAPHORA RESOLUTION)
-% Theo Slide-BUOI-10 trang 20-24
+% PHÉP KẾT HỢP DRS ⊕ (Slide-BUOI-10, Trang 35)
+%
+% "Cho A={DA,CA} và B={DB,CB} là hai DRS.
+%  Phép toán kết hợp DRS cho kết quả là một DRS T={DT,CT} sao cho:
+%  DT = DA ∪ DB
+%  CT = CA ∪ CB"
 % ========================================
 
-% resolve_pronoun(PronounRef, ResolvedEntity)
-resolve_pronoun(pronoun_ref(_, _, Features), Entity) :-
-    Features = features(Person, Number, Category),
-    findall(E-Pos,
-        ( discourse_entity(E, _, features(Person, Number, ECategory)),
-          matches_category(Category, ECategory),
-          discourse_order(E, Pos)
-        ),
-        Matches),
-    % Lấy entity gần nhất (position cao nhất)
-    sort(2, @>=, Matches, [Entity-_|_]).
+merge_drs(drs(RefsA, CondsA), drs(RefsB, CondsB), drs(MergedRefs, MergedConds)) :- !,
+    union(RefsA, RefsB, MergedRefs),
+    append(CondsA, CondsB, MergedConds).
 
-% Matching category cho đại từ
-matches_category(any, _) :- !.
-matches_category(human, human) :- !.
-matches_category(animate, human) :- !.
-matches_category(animate, animate) :- !.
-matches_category(inanimate, inanimate) :- !.
-matches_category(X, X) :- !.
+% Merge với non-DRS terms
+merge_drs(drs(Refs, Conds), Term, drs(Refs, [Term|Conds])) :- 
+    Term \= drs(_, _), !.
+merge_drs(Term, drs(Refs, Conds), drs(Refs, [Term|Conds])) :- 
+    Term \= drs(_, _), !.
+merge_drs(A, B, merge(A, B)).
 
 % ========================================
 % XÂY DỰNG DRS TỪ BIỂU THỨC LAMBDA
-% Theo Slide-BUOI-10, 11
+% Theo Slide-BUOI-11
 % ========================================
 
-% --- DRS cho pred(P, Args) ---
-% Kết quả: drs([], [pred(P, Args)])
-% Không có sở chỉ mới, chỉ có điều kiện
-build_drs(pred(P, Args), drs([], [pred(P, Args)])) :- !.
+% DRS đã là dạng chuẩn
+build_drs(drs(Refs, Conds), drs(Refs, Conds)) :- !.
 
-% --- DRS cho const(E) ---
-% Hằng được thêm vào sở chỉ
-build_drs(const(E), drs([E], [])) :- !.
-
-% --- DRS cho exists(X, Body) ---
-% ∃X. Body → drs([X|Refs], Conds)
-% X được thêm vào phần sở chỉ
-build_drs(exists(X, Body), drs([X|BodyRefs], BodyConds)) :- !,
-    build_drs(Body, drs(BodyRefs, BodyConds)).
-
-% --- DRS cho forall(X, Body) ---
-% ∀X. Body → điều kiện phức: drs([X],{}) → Body
-build_drs(forall(X, Body), drs([], [impl(drs([X], []), BodyDRS)])) :- !,
-    build_drs(Body, BodyDRS).
-
-% --- DRS cho conj(A, B) ---
-% A ∧ B → A ⊕ B (phép kết hợp DRS)
-build_drs(conj(A, B), MergedDRS) :- !,
+% Phép kết hợp merge (⊕)
+build_drs(merge(A, B), Result) :- !,
     build_drs(A, DRSA),
     build_drs(B, DRSB),
-    merge_drs(DRSA, DRSB, MergedDRS).
+    merge_drs(DRSA, DRSB, Result).
 
-% --- DRS cho impl(A, B) ---
-% A → B → drs([], [impl(DRS_A, DRS_B)])
+% Implication (cho định từ "mọi")
+% Theo Slide-BUOI-11 Trang 13
 build_drs(impl(A, B), drs([], [impl(DRSA, DRSB)])) :- !,
     build_drs(A, DRSA),
     build_drs(B, DRSB).
 
-% --- DRS cho neg(A) ---
-% ¬A → drs([], [neg(DRS_A)])
+% Negation
 build_drs(neg(A), drs([], [neg(DRSA)])) :- !,
     build_drs(A, DRSA).
 
-% --- DRS cho wh_question ---
-% Câu hỏi: giữ nguyên để theorem prover xử lý
+% Disjunction (cho "hoặc")
+% Theo Slide-BUOI-11 Trang 12
+build_drs(or(A, B), drs([], [or(DRSA, DRSB)])) :- !,
+    build_drs(A, DRSA),
+    build_drs(B, DRSB).
+
+% Pronoun DRS - cần xác định sở chỉ
+% Theo Slide-BUOI-11 Trang 14: ˣ{X},{} ⊕ (P@X)
+build_drs(pronoun_drs(Var, Gender, Body), pronoun_drs(Var, Gender, DRSBody)) :- !,
+    build_drs(Body, DRSBody).
+
+% WH-question - giữ nguyên để theorem prover xử lý
 build_drs(wh_question(Type, Body), wh_question(Type, Body)) :- !.
 
-% --- DRS cho application (sau beta reduction) ---
+% Predicate condition: R(X1,..,Xn) -> drs([],[R(X1,..,Xn)])
+% Theo Slide-BUOI-10 Trang 29
+build_drs(Pred, drs([], [Pred])) :- 
+    Pred =.. [Functor|Args],
+    Args \= [],
+    \+ member(Functor, [drs, merge, impl, neg, or, lambda, app, wh_question, pronoun_drs]),
+    !.
+
+% Atom (constant reference)
+build_drs(X, drs([X], [])) :- 
+    atom(X), 
+    \+ member(X, [true, false]),
+    !.
+
+% Application - reduce first
 build_drs(app(F, A), DRS) :- !,
-    build_drs(F, DRSF),
-    build_drs(A, DRSA),
-    merge_drs(DRSF, DRSA, DRS).
+    build_drs(F, _),
+    build_drs(A, _),
+    DRS = app(F, A).  % Keep as app for beta reduction
 
-% --- DRS cho lambda (chưa được reduce hết) ---
-build_drs(lambda(_, Body), DRS) :- !,
-    build_drs(Body, DRS).
+% Lambda - build body
+build_drs(lambda(Var, Body), lambda(Var, DRSBody)) :- !,
+    build_drs(Body, DRSBody).
 
-% --- Fallback ---
-build_drs(X, drs([], [X])) :- !.
+% Fallback
+build_drs(X, X).
 
 % ========================================
-% PHÉP KẾT HỢP DRS (⊕)
-% A ⊕ B = drs(Ra ∪ Rb, Ca ∪ Cb)
-% Theo Slide-BUOI-10 trang 35
+% XÁC ĐỊNH ĐỒNG SỞ CHỈ (Slide-BUOI-10, Trang 40)
+%
+% "Cho Y là hồi chỉ, DRS Φ2={Y,...},{...}, a là một sở chỉ
+%  xuất hiện trong tất cả DRS có thể xác định từ Φ2.
+%  Khi đó, có thể thêm điều kiện Y=a vào tập điều kiện của Φ2."
+%
+% Các khía cạnh cần xét:
+% - Chỉ người hay chỉ vật
+% - Giới tính
+% - Số nhiều hay số ít
+% - Vai trò chủ từ hay tân từ
 % ========================================
 
-merge_drs(drs(RefsA, CondsA), drs(RefsB, CondsB), drs(MergedRefs, MergedConds)) :- !,
-    append(RefsA, RefsB, AllRefs),
-    sort(AllRefs, MergedRefs),  % Loại bỏ duplicates
-    append(CondsA, CondsB, MergedConds).
+% resolve_coreference(+PronounDRS, +AvailableReferents, -ResolvedDRS)
+% Xác định đồng sở chỉ cho đại từ
+% Có kiểm tra Gender (Slide-BUOI-10 Trang 40)
+resolve_coreference(pronoun_drs(Var, Gender, drs(Refs, Conds)), AvailableRefs, 
+                    drs([Var|Refs], [Var=Antecedent|Conds])) :-
+    % Tìm sở chỉ phù hợp giới tính trong danh sách (ưu tiên gần nhất)
+    find_matching_antecedent(Gender, AvailableRefs, Antecedent), !.
 
-% Handle non-DRS cases
-merge_drs(wh_question(Type, Body), _, wh_question(Type, Body)) :- !.
-merge_drs(_, wh_question(Type, Body), wh_question(Type, Body)) :- !.
-merge_drs(X, Y, conj(X, Y)).
+resolve_coreference(pronoun_drs(Var, Gender, DRS), _, DRS) :-
+    % Fallback: không tìm được tiền ngữ
+    DRS = drs(Refs, Conds),
+    format('Warning: Cannot resolve coreference for ~w (~w)~n', [Var, Gender]).
+
+resolve_coreference(DRS, _, DRS) :-   % Non-pronoun DRS
+    DRS \= pronoun_drs(_, _, _).
+
+% Helper: Tìm Antecedent phù hợp giới tính
+find_matching_antecedent(plural, [Ref|_], Ref). % Tạm chấp nhận mọi thứ cho số nhiều
+find_matching_antecedent(Gender, [Ref|Rest], Result) :-
+    ( check_gender(Ref, Gender) ->
+        Result = Ref
+    ;
+        find_matching_antecedent(Gender, Rest, Result)
+    ).
+
+% Check gender trong KB
+check_gender(Entity, Gender) :-
+    repository:fact(pred(gender, [Entity, Gender])), !.
+% Fallback nếu không biết giới tính (assume match để tránh lỗi)
+check_gender(Entity, _) :-
+    \+ repository:fact(pred(gender, [Entity, _])).
+
+% ========================================
+% RESOLVE DRS (Recursive)
+% ========================================
+
+resolve_drs(DRS, ResolvedDRS) :-
+    get_discourse_entities(GlobalRefs),
+    resolve_drs_rec(DRS, GlobalRefs, ResolvedDRS).
+
+resolve_drs_rec(drs(Refs, Conds), Context, drs(Refs, ResolvedConds)) :-
+    append(Context, Refs, LocalContext),
+    maplist(resolve_cond(LocalContext), Conds, ResolvedConds).
+resolve_drs_rec(X, _, X).
+
+resolve_cond(Context, pronoun_drs(Var, Gender, Body), Result) :-
+    build_drs(Body, drs(BRefs, BConds)),
+    ( find_matching_antecedent(Gender, Context, Antecedent) ->
+        % Found: Add Var=Antecedent condition
+        NewConds = [Var=Antecedent | BConds],
+        resolve_drs_rec(drs(BRefs, NewConds), Context, ResolvedBody),
+        Result = pronoun_drs(Var, Gender, ResolvedBody)
+    ;
+        % Not found: Keep as is (or warn)
+        resolve_drs_rec(Body, Context, ResolvedBody),
+        Result = pronoun_drs(Var, Gender, ResolvedBody)
+    ).
+
+resolve_cond(Context, neg(DRS), neg(ResolvedDRS)) :-
+    resolve_drs_rec(DRS, Context, ResolvedDRS).
+
+resolve_cond(Context, impl(A, B), impl(RA, RB)) :-
+    resolve_drs_rec(A, Context, RA),
+    resolve_drs_rec(B, Context, RB).
+
+resolve_cond(Context, or(A, B), or(RA, RB)) :-
+    resolve_drs_rec(A, Context, RA),
+    resolve_drs_rec(B, Context, RB).
+
+resolve_cond(_, Cond, Cond).
 
 % ========================================
 % PHỦ ĐỊNH DRS
@@ -191,35 +249,8 @@ negate_drs(drs(Refs, Conds), drs([], [neg(drs(Refs, Conds))])) :- !.
 negate_drs(X, neg(X)).
 
 % ========================================
-% ĐƠN GIẢN HÓA DRS
-% ========================================
-
-simplify_drs(drs(Refs, Conds), drs(SimpRefs, SimpConds)) :- !,
-    sort(Refs, SimpRefs),
-    simplify_conditions(Conds, SimpConds).
-
-simplify_drs(X, X).
-
-simplify_conditions([], []) :- !.
-simplify_conditions([Cond|Rest], [SimpCond|SimpRest]) :-
-    simplify_condition(Cond, SimpCond),
-    simplify_conditions(Rest, SimpRest).
-
-simplify_condition(pred(P, Args), pred(P, SimpArgs)) :- !,
-    maplist(simplify_arg, Args, SimpArgs).
-simplify_condition(neg(DRS), neg(SimpDRS)) :- !,
-    simplify_drs(DRS, SimpDRS).
-simplify_condition(impl(A, B), impl(SimpA, SimpB)) :- !,
-    simplify_drs(A, SimpA),
-    simplify_drs(B, SimpB).
-simplify_condition(X, X).
-
-simplify_arg(const(X), X) :- !.
-simplify_arg(X, X).
-
-% ========================================
 % IN DRS ĐẸP (PRETTY PRINT)
-% Theo format trong slides
+% Theo format trong Slide-BUOI-10 Trang 26
 % ========================================
 
 pretty_print_drs(drs(Refs, Conds)) :- !,
@@ -233,20 +264,14 @@ pretty_print_drs(drs(Refs, Conds)) :- !,
 
 pretty_print_drs(wh_question(Type, Body)) :- !,
     format('WH-Question (~w):~n', [Type]),
-    pretty_print_drs_body(Body).
+    write('  '), writeln(Body).
+
+pretty_print_drs(pronoun_drs(Var, DRS)) :- !,
+    format('Pronoun ^~w:~n', [Var]),
+    pretty_print_drs(DRS).
 
 pretty_print_drs(X) :-
     format('~w~n', [X]).
-
-pretty_print_drs_body(pred(P, Args)) :- !,
-    format('  ~w(', [P]),
-    print_args(Args),
-    writeln(')').
-pretty_print_drs_body(lambda(X, Body)) :- !,
-    format('  λ~w. ', [X]),
-    pretty_print_drs_body(Body).
-pretty_print_drs_body(X) :-
-    format('  ~w~n', [X]).
 
 % In danh sách sở chỉ
 print_refs([]) :- !.
@@ -263,75 +288,47 @@ print_conditions([Cond|Conds]) :-
     writeln(' |'),
     print_conditions(Conds).
 
-print_condition(pred(P, Args)) :- !,
-    write(P), write('('),
+print_condition(impl(A, B)) :- !,
+    print_mini_drs(A),
+    write(' → '),
+    print_mini_drs(B).
+
+print_condition(neg(A)) :- !,
+    write('¬'),
+    print_mini_drs(A).
+
+print_condition(or(A, B)) :- !,
+    print_mini_drs(A),
+    write(' ∨ '),
+    print_mini_drs(B).
+
+print_condition(X=Y) :- !,
+    format('~w = ~w', [X, Y]).
+
+print_condition(Pred) :-
+    Pred =.. [Functor|Args],
+    format('~w(', [Functor]),
     print_args(Args),
     write(')').
 
-print_condition(neg(DRS)) :- !,
-    write('¬'),
-    print_condition_drs(DRS).
-
-print_condition(impl(A, B)) :- !,
-    print_condition_drs(A),
-    write(' → '),
-    print_condition_drs(B).
-
-print_condition(X) :-
-    write(X).
-
-print_condition_drs(drs(Refs, Conds)) :-
+print_mini_drs(drs(Refs, Conds)) :- !,
     write('{'),
     print_refs(Refs),
-    write('}, {'),
-    print_cond_list(Conds),
+    write('},{'),
+    print_conds_inline(Conds),
     write('}').
 
-print_cond_list([]) :- !.
-print_cond_list([C]) :- !,
-    print_condition(C).
-print_cond_list([C|Cs]) :-
+print_mini_drs(X) :- write(X).
+
+print_conds_inline([]) :- !.
+print_conds_inline([C]) :- !, print_condition(C).
+print_conds_inline([C|Cs]) :-
     print_condition(C),
     write(', '),
-    print_cond_list(Cs).
+    print_conds_inline(Cs).
 
-% In các arguments
 print_args([]) :- !.
-print_args([A]) :- !,
-    print_arg(A).
+print_args([A]) :- !, write(A).
 print_args([A|As]) :-
-    print_arg(A), write(', '),
+    write(A), write(', '),
     print_args(As).
-
-print_arg(const(X)) :- !, write(X).
-print_arg(X) :- write(X).
-
-% ========================================
-% UTILITIES
-% ========================================
-
-% Lấy các referent tự do trong DRS
-free_referents(drs(Refs, Conds), Free) :-
-    findall(R, 
-        ( member(Cond, Conds),
-          referent_in_condition(R, Cond),
-          \+ member(R, Refs)
-        ),
-        FreeList),
-    sort(FreeList, Free).
-
-referent_in_condition(Ref, pred(_, Args)) :-
-    member(Ref, Args),
-    \+ is_const(Ref).
-
-referent_in_condition(Ref, neg(DRS)) :-
-    free_referents(DRS, Free),
-    member(Ref, Free).
-
-referent_in_condition(Ref, impl(A, B)) :-
-    ( free_referents(A, FreeA), member(Ref, FreeA)
-    ; free_referents(B, FreeB), member(Ref, FreeB)
-    ).
-
-is_const(const(_)) :- !.
-is_const(X) :- atom(X), !.

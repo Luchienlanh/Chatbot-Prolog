@@ -3,16 +3,29 @@
 % Chuyển đổi DRS sang FOL - THEO SLIDES MÔN HỌC
 % ========================================
 %
-% Theo Slide-DOAN-01 và Slide-BUOI-10:
+% Theo Slide-BUOI-11, Trang 38-43:
 %
-% CHUYỂN ĐỔI DRS → FOL:
+% 6 QUY TẮC DỊCH DRS SANG FOL (giả sử f là hàm dịch):
 %
-% 1. drs([], Conds) → convert_conditions(Conds)
-% 2. drs([X|Refs], Conds) → ∃X. convert(drs(Refs, Conds))
-% 3. pred(P, Args) → P(Args)
-% 4. neg(DRS) → ¬convert(DRS)
-% 5. impl(A, B) → convert(A) → convert(B)
-% 6. conj(A, B) → convert(A) ∧ convert(B)
+% Quy tắc 1 (Trang 39):
+%   f({X1,X2,..,Xn},{γ1,γ2,..,γm}) = ∃X1,X2,..,Xn. f(γ1) ∧ f(γ2) ∧...∧ f(γm)
+%
+% Quy tắc 2 (Trang 40):
+%   Nếu R là quan hệ trên các biến/hằng X1,..,Xn thì:
+%   f(R(X1,X2,..,Xn)) = R(X1,X2,..,Xn)
+%
+% Quy tắc 3 (Trang 41):
+%   Nếu X1 và X2 là hằng hoặc biến thì:
+%   f(X1 = X2) = X1 = X2
+%
+% Quy tắc 4 (Trang 42):
+%   f(¬B) = ¬f(B)
+%
+% Quy tắc 5 (Trang 42):
+%   f(B ∨ C) = f(B) ∨ f(C)
+%
+% Quy tắc 6 (Trang 43):
+%   f({X1,X2,..,Xn},{γ1,...,γm} → B) = ∀X1,X2,..,Xn. f(γ1)∧...∧f(γm) → f(B)
 %
 % ========================================
 
@@ -20,8 +33,7 @@
     convert/2,
     simplify/2,
     to_cnf/2,
-    negate/2,
-    skolemize/2
+    negate/2
 ]).
 
 % ========================================
@@ -29,95 +41,134 @@
 % ========================================
 
 % WH-questions: giữ nguyên để theorem prover xử lý
-convert(wh_question(Type, Body), wh_question(Type, Body)) :- !.
+% Format cũ: wh_question(Type, Body)
+convert(wh_question(Type, Body), wh_question(Type, ConvBody)) :- !,
+    convert(Body, ConvBody).
+
+
+
+% Format mới: wh_question(Type, QueryVar, Body) - giữ QueryVar để tìm kiếm
+convert(wh_question(Type, QueryVar, Body), wh_question(Type, QueryVar, ConvBody)) :- !,
+    convert(Body, ConvBody).
+
+% Pronoun DRS: giữ nguyên nếu chưa resolve
+convert(pronoun_drs(Var, Body), pronoun_drs(Var, ConvBody)) :- !,
+    convert(Body, ConvBody).
+
+% Format mới 3 args: bỏ qua wrapper, convert body
+convert(pronoun_drs(_, _, Body), FOL) :- !,
+    convert(Body, FOL).
+
+% ----------------------------------------
+% QUY TẮC 1 (Trang 39):
+% f({X1,..,Xn},{γ1,..,γm}) = ∃X1,..,Xn. f(γ1) ∧...∧ f(γm)
+%
+% DRS có referents → lượng từ tồn tại cho tất cả referents
+% ----------------------------------------
 
 % DRS rỗng → true
 convert(drs([], []), true) :- !.
 
-% DRS không có sở chỉ, một điều kiện
-convert(drs([], [Cond]), FOL) :- !,
-    convert_condition(Cond, FOL).
-
-% DRS không có sở chỉ, nhiều điều kiện
-% → C1 ∧ C2 ∧ ... ∧ Cn
+% DRS không có sở chỉ, chỉ có điều kiện
 convert(drs([], Conds), FOL) :- !,
     convert_conditions(Conds, FOL).
 
-% DRS có sở chỉ → ∃X. convert(rest)
-% drs([X|Refs], Conds) → ∃X. convert(drs(Refs, Conds))
-convert(drs([Ref|Refs], Conds), exists(Ref, RestFOL)) :- !,
-    convert(drs(Refs, Conds), RestFOL).
+% Rule 1: DRS with referents
+convert(drs([Ref|Refs], Conds), BodyFOL) :-
+    vocabulary:word_semantics(Ref, noun_proper, _), !,
+    convert(drs(Refs, Conds), BodyFOL).
 
-% text_sem(S1, S2) -> merge scope if S1 is existential
-convert(text_sem(exists(Var, Body), S2), exists(Var, and(FBody, FS2))) :- !,
-    convert(Body, FBody),
-    convert(S2, FS2).
+% DRS có sở chỉ → ∃X1. ∃X2. ... f(conditions)
+convert(drs([Ref|Refs], Conds), exists(Ref, BodyFOL)) :-
+    convert(drs(Refs, Conds), BodyFOL).
 
-% For non-existential S1, we treat it as context (assumed true) and only prove S2.
-% This avoids failures when S1 is not strictly provable in KB "Người cho Miu ăn."
-convert(text_sem(_S1, S2), FS2) :- !,
-    convert(S2, FS2).
+% Existential quantifier (từ WH-words format λP.∃x(P(x)))
+convert(exists(Var, Body), exists(Var, ConvBody)) :- !,
+    convert(Body, ConvBody).
 
-% Recursive conversion for logical structures logic
-convert(conj(A, B), and(FA, FB)) :- !,
+% Merge -> And
+convert(merge(A, B), and(FA, FB)) :- !,
     convert(A, FA),
     convert(B, FB).
 
-convert(exists(Var, Body), exists(Var, FBody)) :- !,
-    convert(Body, FBody).
+% ----------------------------------------
+% QUY TẮC 2 (Trang 40):
+% f(R(X1,..,Xn)) = R(X1,..,Xn)
+% Predicate giữ nguyên
+% ----------------------------------------
 
-convert(pred(P, Args), pred(P, Args)) :- !.
+% Force Equality Check
+convert_condition(X = Y, X = Y) :- !.
 
-% Fallback cho các trường hợp khác
-convert(X, X).
+convert_condition(Pred, pred(Functor, Args)) :- 
+    Pred =.. [Functor|Args],
+    Args \= [],
+    Args \= [],
+    \+ member(Functor, [neg, impl, or, drs, pronoun_drs, exists, =]),
+    !.
 
-% ========================================
-% CHUYỂN ĐỔI ĐIỀU KIỆN
-% ========================================
+% ----------------------------------------
+% QUY TẮC 3 (Trang 41):
+% f(X1 = X2) = X1 = X2
+% Điều kiện đẳng thức giữ nguyên
+% ----------------------------------------
 
-% pred(P, Args) → pred(P, Args)
-convert_condition(pred(P, Args), pred(P, Args)) :- !.
+convert_condition(X = Y, X = Y) :- !.
 
-% type(X, T) → T(X)
-convert_condition(type(X, T), pred(T, [X])) :- !.
+% ----------------------------------------
+% QUY TẮC 4 (Trang 42):
+% f(¬B) = ¬f(B)
+% ----------------------------------------
 
-% neg(DRS) → ¬convert(DRS)
 convert_condition(neg(DRS), neg(FOL)) :- !,
     convert(DRS, FOL).
 
-% impl(A, B) → convert(A) → convert(B)
-convert_condition(impl(DRS1, DRS2), impl(FOL1, FOL2)) :- !,
-    convert(DRS1, FOL1),
-    convert(DRS2, FOL2).
+% ----------------------------------------
+% QUY TẮC 5 (Trang 42):
+% f(B ∨ C) = f(B) ∨ f(C)
+% ----------------------------------------
 
-% conj(A, B)
-convert_condition(conj(A, B), and(FOLA, FOLB)) :- !,
-    convert_condition(A, FOLA),
-    convert_condition(B, FOLB).
+convert_condition(or(A, B), or(FOLA, FOLB)) :- !,
+    convert(A, FOLA),
+    convert(B, FOLB).
+
+% ----------------------------------------
+% QUY TẮC 6 (Trang 43):
+% f({X1,..,Xn},{γ1,...} → B) = ∀X1,..,Xn. f(γ1)∧... → f(B)
+% 
+% Implication với DRS condition (từ "mọi")
+% ----------------------------------------
+
+convert_condition(impl(drs([Ref|Refs], Conds), Consequent), forall(Ref, RestFOL)) :- !,
+    convert_condition(impl(drs(Refs, Conds), Consequent), RestFOL).
+
+convert_condition(impl(drs([], Conds), Consequent), impl(CondFOL, ConsFOL)) :- !,
+    convert_conditions(Conds, CondFOL),
+    convert(Consequent, ConsFOL).
+
+% Implication không có DRS
+convert_condition(impl(A, B), impl(FOLA, FOLB)) :- !,
+    convert(A, FOLA),
+    convert(B, FOLB).
 
 % DRS lồng nhau
 convert_condition(drs(Refs, Conds), FOL) :- !,
     convert(drs(Refs, Conds), FOL).
 
-% Handle text_sem in DRS condition (e.g. from composition)
-convert_condition(text_sem(S1, S2), FOL) :- !,
-    convert(text_sem(S1, S2), FOL).
+% Pronoun DRS lồng nhau
+convert_condition(pronoun_drs(_, _, Body), FOL) :- !,
+    convert(Body, FOL).
 
-% Handle explicit existential quantifier in logic form (naked exists)
-convert_condition(exists(Var, Body), exists(Var, FBody)) :- !,
-    convert_condition(Body, FBody).
-
-% Handle explicit logical structure embedded in DRS
-convert_condition(and(A, B), and(FA, FB)) :- !,
-    convert_condition(A, FA),
-    convert_condition(B, FB).
+% Existential Quantifier lồng nhau
+convert_condition(exists(Var, Body), exists(Var, FOLBody)) :- !,
+    convert(Body, FOLBody).
 
 % Fallback
 convert_condition(Cond, Cond).
 
 % ========================================
 % CHUYỂN ĐỔI NHIỀU ĐIỀU KIỆN
-% [C1, C2, ...] → C1 ∧ C2 ∧ ...
+% [γ1, γ2, ...] → f(γ1) ∧ f(γ2) ∧ ...
 % ========================================
 
 convert_conditions([], true) :- !.
@@ -160,9 +211,13 @@ simplify(neg(neg(X)), Result) :- !,
     simplify(X, Result).
 
 % Đệ quy
-simplify(and(X, Y), and(SX, SY)) :- !,
+simplify(and(X, Y), Result) :- !,
     simplify(X, SX),
-    simplify(Y, SY).
+    simplify(Y, SY),
+    ( SX = true -> Result = SY
+    ; SY = true -> Result = SX
+    ; Result = and(SX, SY)
+    ).
 
 simplify(or(X, Y), or(SX, SY)) :- !,
     simplify(X, SX),
@@ -285,7 +340,7 @@ move_negations_inward(forall(V, B), forall(V, NB)) :- !,
 
 move_negations_inward(X, X).
 
-% Phân phối OR qua AND: (A ∧ B) ∨ C ≡ (A ∨ C) ∧ (B ∨ C)
+% Phân phối OR qua AND
 distribute_or_over_and(or(and(A, B), C), and(AC, BC)) :- !,
     distribute_or_over_and(or(A, C), AC),
     distribute_or_over_and(or(B, C), BC).
@@ -308,63 +363,3 @@ distribute_or_over_and(or(A, B), Result) :- !,
     ).
 
 distribute_or_over_and(X, X).
-
-% ========================================
-% SKOLEMIZATION
-% Loại bỏ lượng từ tồn tại
-% ========================================
-
-skolemize(exists(Var, Body), Skolemized) :- !,
-    gensym(sk, SkolemConst),
-    substitute_var(Var, SkolemConst, Body, SubBody),
-    skolemize(SubBody, Skolemized).
-
-skolemize(forall(Var, Body), forall(Var, Skolemized)) :- !,
-    skolemize(Body, Skolemized).
-
-skolemize(and(A, B), and(SA, SB)) :- !,
-    skolemize(A, SA),
-    skolemize(B, SB).
-
-skolemize(or(A, B), or(SA, SB)) :- !,
-    skolemize(A, SA),
-    skolemize(B, SB).
-
-skolemize(neg(A), neg(SA)) :- !,
-    skolemize(A, SA).
-
-skolemize(X, X).
-
-% Thay thế biến
-substitute_var(Var, Value, Var, Value) :- !.
-
-substitute_var(Var, Value, and(A, B), and(NA, NB)) :- !,
-    substitute_var(Var, Value, A, NA),
-    substitute_var(Var, Value, B, NB).
-
-substitute_var(Var, Value, or(A, B), or(NA, NB)) :- !,
-    substitute_var(Var, Value, A, NA),
-    substitute_var(Var, Value, B, NB).
-
-substitute_var(Var, Value, neg(A), neg(NA)) :- !,
-    substitute_var(Var, Value, A, NA).
-
-substitute_var(Var, Value, pred(P, Args), pred(P, NewArgs)) :- !,
-    maplist(substitute_in_arg(Var, Value), Args, NewArgs).
-
-substitute_var(Var, Value, forall(V, Body), forall(V, NewBody)) :-
-    V \= Var, !,
-    substitute_var(Var, Value, Body, NewBody).
-
-substitute_var(Var, _, forall(Var, Body), forall(Var, Body)) :- !.
-
-substitute_var(Var, Value, exists(V, Body), exists(V, NewBody)) :-
-    V \= Var, !,
-    substitute_var(Var, Value, Body, NewBody).
-
-substitute_var(Var, _, exists(Var, Body), exists(Var, Body)) :- !.
-
-substitute_var(_, _, X, X).
-
-substitute_in_arg(Var, Value, Var, Value) :- !.
-substitute_in_arg(_, _, X, X).

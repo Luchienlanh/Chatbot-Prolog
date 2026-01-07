@@ -3,26 +3,27 @@
 % Lambda-based Lexical Semantics - THEO SLIDES MÔN HỌC
 % ========================================
 %
-% Format biểu thức Lambda theo Slide-BUOI-08, 09, 11:
+% Format biểu thức Lambda DRS theo Slide-BUOI-11:
 %
-% 1. Danh từ riêng:     λP. P@const        (ví dụ: λP. P@nam)
-% 2. Danh từ chung:     λX. danh_từ(X)
-% 3. Động từ nội động:  λX. động_từ(X)
-% 4. Động từ ngoại động: λP. λX. P@(λY. động_từ(X,Y))
-% 5. Động từ 3 ngôi:    λP. λQ. λX. (Q@(λY. P@(λZ. động_từ(X,Z,Y))))
-% 6. Định từ "một":     λP. λQ. exists(X, P@X ∧ Q@X)
-% 7. Định từ "mọi":     λP. λQ. forall(X, P@X → Q@X)
-% 8. Đại từ:            λP. X{X},P@X (cần xác định sở chỉ)
+% 1. Danh từ riêng (Trang 4):     λP. {danh_từ},{} ⊕ (P@danh_từ)
+% 2. Danh từ chung (Trang 6):     λX. {},{danh_từ(X)}
+% 3. Tính từ (Trang 7):           λX. {},{tính_từ(X)}
+% 4. Động từ nội động (Trang 8):  λX. {},{động_từ(X)}
+% 5. Động từ ngoại động (Trang 9): λP. λX. P@ λY. {},{động_từ(X,Y)}
+% 6. Động từ 3 ngôi (Trang 10):   λP. λQ. λX. (Q@ (λY. P@ λZ. {},{động_từ(X,Z,Y)}))
+% 7. Giới từ (Trang 11):          λP. λX. P@ λY. {},{giới_từ(X,Y)}
+% 8. Số từ "một" (Trang 13):      λP. λQ. {X},{} ⊕ P@X ⊕ Q@X
+% 9. Định từ "mọi" (Trang 13):    λP. λQ. {},{({X},{} ⊕ P@X) → Q@X}
+% 10. Đại từ (Trang 14):          λP. ˣ{X},{} ⊕ (P@X)
+% 11. Từ "là", "thì" (Trang 15):  Bỏ qua về mặt ngữ nghĩa
 %
 % Notation trong Prolog:
-%   lambda(Var, Body)  = λVar. Body
-%   app(F, A)          = F@A  
-%   pred(Name, Args)   = vị từ với các tham số
-%   const(E)           = hằng thực thể E
-%   exists(X, Body)    = ∃X. Body
-%   forall(X, Body)    = ∀X. Body
-%   conj(A, B)         = A ∧ B
-%   impl(A, B)         = A → B
+%   lambda(Var, Body)     = λVar. Body
+%   app(F, A)             = F@A  
+%   drs(Refs, Conds)      = {Refs},{Conds}
+%   merge(A, B)           = A ⊕ B
+%   impl(A, B)            = A → B
+%   pronoun_drs(Var, DRS) = ˣDRS (cần xác định sở chỉ cho Var)
 %
 % ========================================
 
@@ -35,379 +36,317 @@
 ]).
 
 % ========================================
-% 1. HẰNG (CONSTANTS) - Proper Names ONLY
-% Kiểu: (e→t)→t
-% Format: λP. P@const
-% CHỈ dành cho TÊN RIÊNG của con người và động vật
+% 1. DANH TỪ RIÊNG (Slide-BUOI-11, Trang 4)
+% Format: λP. {danh_từ},{} ⊕ (P@danh_từ)
 % ========================================
 
-% Người (proper names)
-word_semantics(nhan, noun_proper, lambda(p, app(p, const(nhan)))).
-word_semantics(linh, noun_proper, lambda(p, app(p, const(linh)))).
-word_semantics(bo_nhan, noun_proper, lambda(p, app(p, const(bo_nhan)))).
-word_semantics(bo, noun_proper, lambda(p, app(p, const(bo_nhan)))).
+% Người
+word_semantics(nhan, noun_proper, 
+    lambda(p, merge(drs([nhan],[]), app(p, nhan)))).
+word_semantics(linh, noun_proper, 
+    lambda(p, merge(drs([linh],[]), app(p, linh)))).
+word_semantics(bo_nhan, noun_proper, 
+    lambda(p, merge(drs([bo_nhan],[]), app(p, bo_nhan)))).
+word_semantics(bo, noun_proper, 
+    lambda(p, merge(drs([bo_nhan],[]), app(p, bo_nhan)))).
+word_semantics(nam, noun_proper,
+    lambda(p, merge(drs([nam],[]), app(p, nam)))).
+word_semantics(binh, noun_proper,
+    lambda(p, merge(drs([binh],[]), app(p, binh)))).
+word_semantics(ly, noun_proper,
+    lambda(p, merge(drs([ly],[]), app(p, ly)))).
 
-% Động vật (proper name - pet with name)
-word_semantics(miu, noun_proper, lambda(p, app(p, const(miu)))).
+% Động vật (pet with name)
+word_semantics(miu, noun_proper, 
+    lambda(p, merge(drs([miu],[]), app(p, miu)))).
 
-% Objects/Places - ONLY unique constants (không có common noun version)
-word_semantics(xe_dap_nhan, noun_proper, lambda(p, app(p, const(xe_dap_nhan)))).
-word_semantics(nha_nhan_linh, noun_proper, lambda(p, app(p, const(nha_nhan_linh)))).
-word_semantics(cac_bong_hoa, noun_proper, lambda(p, app(p, const(cac_bong_hoa)))).
-
-% Locations/attributes without common noun versions
-word_semantics(truong, noun_proper, lambda(p, app(p, const(truong)))).
-word_semantics(ngoai_o, noun_proper, lambda(p, app(p, const(ngoai_o)))).
-word_semantics(xanh, noun_proper, lambda(p, app(p, const(xanh)))).
-
-% ========================================
-% 2. DANH TỪ CHUNG (COMMON NOUNS)
-% Vị từ 1 ngôi - Type predicates
-% Kiểu: e→t
-% Format: λP. pred(type, [P])
-% ========================================
-
-% Person types
-word_semantics(nguoi, noun_common, lambda(x, pred(nguoi, [x]))).
-
-% Animal types
-word_semantics(dong_vat, noun_common, lambda(x, pred(dong_vat, [x]))).
-word_semantics(meo, noun_common, lambda(x, pred(meo, [x]))).
-word_semantics(con_meo, noun_common, lambda(x, pred(meo, [x]))).
-word_semantics(la_meo, noun_common, lambda(x, pred(meo, [x]))).
-word_semantics(thu_cung, noun_common, lambda(x, pred(thu_cung, [x]))).
-
-% Object types - Vehicles, furniture
-word_semantics(xe_dap, noun_common, lambda(x, pred(xe_dap, [x]))).
-word_semantics(xe, noun_common, lambda(x, pred(xe, [x]))).
-word_semantics(ghe, noun_common, lambda(x, pred(ghe, [x]))).
-word_semantics(phuong_tien, noun_common, lambda(x, pred(phuong_tien, [x]))).
-
-% Place types
-word_semantics(nha, noun_common, lambda(x, pred(nha, [x]))).
-word_semantics(phong_khach, noun_common, lambda(x, pred(phong_khach, [x]))).
-word_semantics(vuon, noun_common, lambda(x, pred(vuon, [x]))).
-word_semantics(noi, noun_common, lambda(x, pred(dia_diem, [x]))).
-word_semantics(dia_diem, noun_common, lambda(x, pred(dia_diem, [x]))).
-
-% Plant types
-word_semantics(hoa, noun_common, lambda(x, pred(hoa, [x]))).
-
-% Other
-word_semantics(do_vat, noun_common, lambda(x, pred(do_vat, [x]))).
-word_semantics(mon_qua, noun_common, lambda(x, pred(qua_tang, [x]))).
-word_semantics(ten, noun_common, lambda(x, pred(ten, [x]))).
-word_semantics(bong, noun_common, lambda(x, pred(bong, [x]))).
-
-% Relationship nouns - 2-place predicates
-% em_gai(X, Y) means "X is younger sister of Y"
-% Usage: "Linh là em gái của Nhân" → em_gai(linh, nhan)
-word_semantics(em_gai, noun_relation, lambda(y, lambda(x, pred(em_gai, [x, y])))).
+% Địa điểm
+word_semantics(truong, noun_proper, 
+    lambda(p, merge(drs([truong],[]), app(p, truong)))).
 
 % ========================================
-% CLASSIFIERS (Loại từ)
-% Kiểu: transparent (không ảnh hưởng ngữ nghĩa)
+% 2. DANH TỪ CHUNG (Slide-BUOI-11, Trang 6)
+% Format: λX. {},{danh_từ(X)}
 % ========================================
 
-word_semantics(chiec, classifier, lambda(x, x)).
-word_semantics(con, classifier, lambda(x, x)).
-word_semantics(cai, classifier, lambda(x, x)).
+% Người
+word_semantics(nguoi, noun_common, lambda(x, drs([],[nguoi(x)]))).
+word_semantics(hoc_sinh, noun_common, lambda(x, drs([],[hoc_sinh(x)]))).
+word_semantics(ban, noun_common, lambda(x, drs([],[ban(x)]))).
+
+% Động vật
+word_semantics(meo, noun_common, lambda(x, drs([],[meo(x)]))).
+word_semantics(con_meo, noun_common, lambda(x, drs([],[meo(x)]))).
+word_semantics(cho, noun_common, lambda(x, drs([],[cho(x)]))).
+word_semantics(con_cho, noun_common, lambda(x, drs([],[cho(x)]))).
+
+% Đồ vật
+word_semantics(xe, noun_common, lambda(x, drs([],[xe(x)]))).
+word_semantics(xe_dap, noun_common, lambda(x, drs([],[xe_dap(x)]))).
+word_semantics(but, noun_common, lambda(x, drs([],[but(x)]))).
+word_semantics(cay_but, noun_common, lambda(x, drs([],[but(x)]))).
+word_semantics(vo, noun_common, lambda(x, drs([],[vo(x)]))).
+word_semantics(quyen_vo, noun_common, lambda(x, drs([],[vo(x)]))).
+word_semantics(sach, noun_common, lambda(x, drs([],[sach(x)]))).
+word_semantics(qua, noun_common, lambda(x, drs([],[qua(x)]))).
+word_semantics(mon_qua, noun_common, lambda(x, drs([],[qua(x)]))).
+word_semantics(ghe, noun_common, lambda(x, drs([],[ghe(x)]))).
+word_semantics(chuong, noun_common, lambda(x, drs([],[chuong(x)]))).
+word_semantics(gio, noun_common, lambda(x, drs([],[gio(x)]))).
+
+% Thực vật
+word_semantics(hoa, noun_common, lambda(x, drs([],[hoa(x)]))).
+
+% Nơi chốn
+word_semantics(nha, noun_common, lambda(x, drs([],[nha(x)]))).
+word_semantics(vuon, noun_common, lambda(x, drs([],[vuon(x)]))).
+word_semantics(phong_khach, noun_common, lambda(x, drs([],[phong_khach(x)]))).
+word_semantics(xom, noun_common, lambda(x, drs([],[xom(x)]))).
 
 % ========================================
-% WH-WORDS (Từ nghi vấn)
-% Kiểu: Take predicate, wrap in wh_question
+% 3. DANH TỪ CHỈ QUAN HỆ 2 NGÔI (Slide-BUOI-11, Trang 5)
+% Format: λP. λX. P@ λY. {},{quan_hệ(X, Y)}
+% Ví dụ: "X là bạn của Y" → bạn(X, Y)
 % ========================================
 
-% "ai" (who) - for persons
-word_semantics(ai, wh_word, lambda(p, wh_question(who, app(p, const(_))))).
-
-% "gì" (what) - for things/objects
-word_semantics(gi, wh_word, lambda(p, wh_question(what, app(p, const(_))))).
-
-% "đâu" (where) - for locations  
-word_semantics(dau, wh_word, lambda(p, wh_question(where, app(p, const(_))))).
-
-%========================================
-% 3. ĐỘNG TỪ NỘI ĐỘNG (INTRANSITIVE VERBS)
-% Kiểu: e→t
-% Format: λX. động_từ(X)
-% ========================================
-
-word_semantics(ngu, verb_intrans, lambda(x, pred(ngu, [x]))).
-word_semantics(nam_ngu, verb_intrans, lambda(x, pred(nam_ngu, [x]))).
-word_semantics(chay, verb_intrans, lambda(x, pred(chay, [x]))).
-word_semantics(di, verb_intrans, lambda(x, pred(di, [x]))).
-word_semantics(cuoi, verb_intrans, lambda(x, pred(cuoi, [x]))).
-word_semantics(dung, verb_intrans, lambda(x, pred(dung, [x]))).
-word_semantics(de_thuong, verb_intrans, lambda(x, pred(de_thuong, [x]))).
-word_semantics(hien, verb_intrans, lambda(x, pred(hien, [x]))).
-word_semantics(la_meo, verb_intrans, lambda(x, pred(la_meo, [x]))).
+word_semantics(em_gai, noun_relation, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[em_gai(x, y)])))))).
+word_semantics(anh, noun_relation,
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[anh(x, y)])))))).
+word_semantics(cha, noun_relation,
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[cha(x, y)])))))).
+word_semantics(ban_cua, noun_relation,
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[ban(x, y)])))))).
+word_semantics(chu, noun_relation,
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[chu(x, y)])))))).
 
 % ========================================
-% 4. ĐỘNG TỪ NGOẠI ĐỘNG (TRANSITIVE VERBS)
-% Kiểu: ((e→t)→t) → (e→t)
-% Format theo Slide-BUOI-09: λP. λX. P@(λY. động_từ(X,Y))
-%
-% Giải thích:
-% - P là NP (object), có kiểu (e→t)→t
-% - X là subject (entity)
-% - Khi áp dụng P vào λY.động_từ(X,Y), ta được động_từ(X, object)
+% 4. TÍNH TỪ (Slide-BUOI-11, Trang 7)
+% Format: λX. {},{tính_từ(X)}
 % ========================================
 
-word_semantics(thich, verb_trans, 
-    lambda(p, lambda(s, app(p, lambda(o, pred(thich, [s, o])))))).
+word_semantics(dep, adjective, lambda(x, drs([],[dep(x)]))).
+word_semantics(tot, adjective, lambda(x, drs([],[tot(x)]))).
+word_semantics(xanh, adjective, lambda(x, drs([],[xanh(x)]))).
+word_semantics(nho, adjective, lambda(x, drs([],[nho(x)]))).
+word_semantics(lon, adjective, lambda(x, drs([],[lon(x)]))).
+word_semantics(cu, adjective, lambda(x, drs([],[cu(x)]))).
+word_semantics(moi, adjective, lambda(x, drs([],[moi_adj(x)]))).
 
-word_semantics(so_huu, verb_trans, 
-    lambda(p, lambda(s, app(p, lambda(o, pred(so_huu, [s, o])))))).
+% ========================================
+% 5. ĐỘNG TỪ NỘI ĐỘNG (Slide-BUOI-11, Trang 8)
+% Format: λX. {},{động_từ(X)}
+% ========================================
+
+word_semantics(ngu, verb_intrans, lambda(x, drs([],[ngu(x)]))).
+word_semantics(dung, verb_intrans, lambda(x, drs([],[dung(x)]))).
+word_semantics(cuoi, verb_intrans, lambda(x, drs([],[cuoi(x)]))).
+word_semantics(chay, verb_intrans, lambda(x, drs([],[chay(x)]))).
+word_semantics(di, verb_intrans, lambda(x, drs([],[di(x)]))).
+
+% ========================================
+% 6. ĐỘNG TỪ NGOẠI ĐỘNG (Slide-BUOI-11, Trang 9)
+% Format: λP. λX. P@ λY. {},{động_từ(X, Y)}
+% ========================================
 
 word_semantics(co, verb_trans, 
-    lambda(p, lambda(s, app(p, lambda(o, pred(so_huu, [s, o])))))).
-
-word_semantics(cho_an, verb_trans, 
-    lambda(p, lambda(s, app(p, lambda(o, pred(cho_an, [s, o])))))).
-
-word_semantics(choi_voi, verb_trans, 
-    lambda(p, lambda(s, app(p, lambda(o, pred(choi_voi, [s, o])))))).
-
-word_semantics(song_tai, verb_trans, 
-    lambda(p, lambda(s, app(p, lambda(o, pred(song_tai, [s, o])))))).
-
-word_semantics(choi, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(choi_voi, [x, y])))))).
-
-word_semantics(song_cung, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(song_cung, [x, y])))))).
-
-word_semantics(song_voi, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(song_cung, [x, y])))))).
-
-word_semantics(ngam, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(ngam, [x, y])))))).
-
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[co(x, y)])))))).
+word_semantics(thich, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[thich(x, y)])))))).
 word_semantics(quen, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(quen, [x, y])))))).
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[quen(x, y)])))))).
+word_semantics(cho, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[cho(x, y)])))))).
+word_semantics(an, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[an(x, y)])))))).
+word_semantics(thay, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[thay(x, y)])))))).
+word_semantics(goi, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[goi(x, y)])))))).
+word_semantics(can, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[can(x, y)])))))).
 
-word_semantics(ten_la, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(ten, [x, y])))))).
-
-% Động từ "ở" với nghĩa vị trí
-word_semantics(o, verb_trans, 
-    lambda(p, lambda(x, app(p, lambda(y, pred(vi_tri, [x, y])))))).
+% Động từ từ KB
+word_semantics(cho_an, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[cho_an(x, y)])))))).
+word_semantics(so_huu, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[so_huu(x, y)])))))).
+word_semantics(song_cung, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[song_cung(x, y)])))))).
+word_semantics(choi_voi, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[choi_voi(x, y)])))))).
+word_semantics(ngam, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[ngam(x, y)])))))).
+word_semantics(em_gai, verb_trans, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[em_gai(x, y)])))))).
 
 % ========================================
-% 5. ĐỘNG TỪ 3 NGÔI (DITRANSITIVE VERBS)
-% Kiểu: NP → NP → (e→t)
-% Format theo Slide-BUOI-09: λP. λQ. λX. (Q@(λY. P@(λZ. động_từ(X,Z,Y))))
-%
-% Trong đó:
-% - P là direct object (cái gì)
-% - Q là indirect object (cho ai)  
-% - X là subject
+% 7. ĐỘNG TỪ 3 NGÔI (Slide-BUOI-11, Trang 10)
+% Format: λP. λQ. λX. (Q@ (λY. P@ λZ. {},{động_từ(X, Z, Y)}))
 % ========================================
 
+word_semantics(cho_ditrans, verb_ditrans,
+    lambda(p, lambda(q, lambda(x, 
+        app(q, lambda(y, app(p, lambda(z, drs([],[cho(x, z, y)]))))))))).
 word_semantics(tang, verb_ditrans,
     lambda(p, lambda(q, lambda(x, 
-        app(q, lambda(y, app(p, lambda(z, pred(tang, [x, y, z]))))))))).
-
-word_semantics(cho, verb_ditrans,
-    lambda(p, lambda(q, lambda(x, 
-        app(q, lambda(y, app(p, lambda(z, pred(cho, [x, y, z]))))))))).
-
-word_semantics(gui, verb_ditrans,
-    lambda(p, lambda(q, lambda(x, 
-        app(q, lambda(y, app(p, lambda(z, pred(gui, [x, y, z]))))))))).
+        app(q, lambda(y, app(p, lambda(z, drs([],[tang(x, z, y)]))))))))).
 
 % ========================================
-% 6. ĐỊNH TỪ (DETERMINERS)
+% 8. GIỚI TỪ CHỈ VỊ TRÍ (Slide-BUOI-11, Trang 11)
+% Format: λP. λX. P@ λY. {},{giới_từ(X, Y)}
 % ========================================
 
-% "Một" - Existential quantifier
-% Kiểu: (e→t) → ((e→t)→t)
+word_semantics(tren, preposition, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[tren(x, y)])))))).
+word_semantics(duoi, preposition, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[duoi(x, y)])))))).
+word_semantics(truoc, preposition, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[truoc(x, y)])))))).
+word_semantics(sau, preposition, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[sau(x, y)])))))).
+word_semantics(trong, preposition, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[trong(x, y)])))))).
+word_semantics(cua, preposition, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[cua(x, y)])))))).
+word_semantics(o, preposition, 
+    lambda(p, lambda(x, app(p, lambda(y, drs([],[o(x, y)])))))).
+
+% ========================================
+% 9. LIÊN TỪ (Slide-BUOI-11, Trang 12)
+% Và: λP. λQ. λX. P@X ⊕ Q@X
+% Hoặc: λP. λQ. λX. {},{P@X ∨ Q@X}
+% ========================================
+
+word_semantics(va, conjunction, 
+    lambda(p, lambda(q, lambda(x, merge(app(p, x), app(q, x)))))).
+word_semantics(hoac, conjunction, 
+    lambda(p, lambda(q, lambda(x, drs([],[or(app(p, x), app(q, x))]))))).
+
+% ========================================
+% 10. SỐ TỪ "MỘT" VÀ ĐỊNH TỪ "MỌI" (Slide-BUOI-11, Trang 13)
+% Một: λP. λQ. {X},{} ⊕ P@X ⊕ Q@X
+% Mọi: λP. λQ. {},{({X},{} ⊕ P@X) → Q@X}
+% ========================================
+
 word_semantics(mot, determiner,
-    lambda(p, lambda(q, exists(e, conj(app(p, e), app(q, e)))))).
+    lambda(p, lambda(q, merge(merge(drs([x],[]), app(p, x)), app(q, x))))).
 
-% "Những" - Existential quantifier (treated same as 'mot' for simplicty)
-word_semantics(nhung, determiner,
-    lambda(p, lambda(q, exists(e, conj(app(p, e), app(q, e)))))).
-
-% "Mọi", "Mỗi" - Universal quantifier
-% Format: λP. λQ. ∀X. (P@X → Q@X)
 word_semantics(moi, determiner,
-    lambda(p, lambda(q, 
-        forall(x, impl(app(p, x), app(q, x)))))).
+    lambda(p, lambda(q, drs([],[impl(merge(drs([x],[]), app(p, x)), app(q, x))])))).
 
 word_semantics(moi_mot, determiner,
-    lambda(p, lambda(q, 
-        forall(x, impl(app(p, x), app(q, x)))))).
-
-% "Không" - Negation
-% Format: λP. λQ. ¬∃X. (P@X ∧ Q@X)
-word_semantics(khong_co, determiner,
-    lambda(p, lambda(q, 
-        neg(exists(x, conj(app(p, x), app(q, x))))))).
+    lambda(p, lambda(q, drs([],[impl(merge(drs([x],[]), app(p, x)), app(q, x))])))).
 
 % ========================================
-% 7. ĐẠI TỪ (PRONOUNS)
-% Format theo Slide-BUOI-11: λP. X{X},{} ⊕ P@X
-% (cần xác định sở chỉ cho X)
+% 11. ĐẠI TỪ (Slide-BUOI-11, Trang 14)
+% Format: λP. ˣ{X},{} ⊕ (P@X)
+% Ký hiệu ˣ cho biết cần xác định sở chỉ cho X
 % ========================================
-
+% "Nó" - neutral (vật/động vật)
 word_semantics(no, pronoun, 
-    lambda(p, pronoun_ref(x, app(p, x), features(third, singular, any)))).
+    lambda(p, pronoun_drs(x, neutral, app(p, x)))).
 
-word_semantics(anh_ay, pronoun,
-    lambda(p, pronoun_ref(x, app(p, x), features(third, singular, male)))).
+% "Anh" - Identity (User Request)
+% Warning: Loses gender info if used alone
+word_semantics(anh, pronoun, lambda(p, p)).
 
-word_semantics(co_ay, pronoun,
-    lambda(p, pronoun_ref(x, app(p, x), features(third, singular, female)))).
+% "Cô" - Identity (User Request)
+word_semantics(co, pronoun, lambda(p, p)).
 
+% "Ấy" - User Request: lambda P. P@X
+% Implementation: lambda P. pronoun_drs(x, _Gender, P@x)
+% Uses Unbound Gender to match ANY antecedent (since gender info is lost from "anh"/"co")
+word_semantics(ay, determiner, 
+    lambda(p, pronoun_drs(x, _Gender, app(p, x)))).
+
+% "Họ" - plural
 word_semantics(ho, pronoun,
-    lambda(p, pronoun_ref(x, app(p, x), features(third, plural, any)))).
+    lambda(p, pronoun_drs(x, plural, app(p, x)))).
 
 % ========================================
-% 8. CÁC TỪ ĐẶC BIỆT
+% 12. TỪ "LÀ", "THÌ", "Ở" (Slide-BUOI-11, Trang 15)
+% Bỏ qua về mặt ngữ nghĩa - chỉ có chức năng ngữ pháp
 % ========================================
 
-% Từ "là", "thì", "ở" - identity/copula
-% Theo Slide-BUOI-09: λP. P (bỏ qua về mặt ngữ nghĩa)
 word_semantics(la, copula, lambda(p, p)).
 word_semantics(thi, copula, lambda(p, p)).
 
 % ========================================
-% 9. TÍNH TỪ (ADJECTIVES)
-% Kiểu: (e→t) → (e→t)
-% Format: λP. λX. (P@X ∧ tính_từ(X))
+% 13. LOẠI TỪ (CLASSIFIERS)
+% Bỏ qua về mặt ngữ nghĩa
 % ========================================
 
-word_semantics(nho, adjective,
-    lambda(p, lambda(x, conj(app(p, x), pred(nho, [x]))))).
-
-word_semantics(lon, adjective,
-    lambda(p, lambda(x, conj(app(p, x), pred(lon, [x]))))).
-
-word_semantics(dep, adjective,
-    lambda(p, lambda(x, conj(app(p, x), pred(dep, [x]))))).
-
-word_semantics(xanh_adj, adjective,
-    lambda(p, lambda(x, conj(app(p, x), pred(mau_xanh, [x]))))).
+word_semantics(con, classifier, lambda(x, x)).
+word_semantics(chiec, classifier, lambda(x, x)).
+word_semantics(cai, classifier, lambda(x, x)).
+word_semantics(cay, classifier, lambda(x, x)).
+word_semantics(quyen, classifier, lambda(x, x)).
+word_semantics(bong, classifier, lambda(x, x)).
 
 % ========================================
-% 10. GIỚI TỪ (PREPOSITIONS)
-% Kiểu: NP → (e→t) → (e→t)
-% Format theo Slide-BUOI-09: λP. λX. P@(λY. giới_từ(X,Y))
+% 14. TỪ NGHI VẤN (WH-WORDS)
+% THEO SLIDE-BUOI-11: λP. {X},{} ⊕ P@X
+% Query type được cung cấp từ input query(_, Type)
+% => KHÔNG cần biến đặc biệt, chỉ cần DRS thuần túy
 % ========================================
 
-word_semantics(tren, preposition,
-    lambda(p, lambda(x, app(p, lambda(y, pred(tren, [x, y])))))).
-
-word_semantics(trong, preposition,
-    lambda(p, lambda(x, app(p, lambda(y, pred(trong, [x, y])))))).
-
-word_semantics(sau, preposition,
-    lambda(p, lambda(x, app(p, lambda(y, pred(sau, [x, y])))))).
-
-word_semantics(truoc, preposition,
-    lambda(p, lambda(x, app(p, lambda(y, pred(truoc, [x, y])))))).
-
-word_semantics(cua, preposition,
-    lambda(p, lambda(x, app(p, lambda(y, pred(cua, [x, y])))))).
-
-word_semantics(tai, preposition,
-    lambda(p, lambda(x, app(p, lambda(y, pred(tai, [x, y])))))).
-
-word_semantics(o, preposition,
-    lambda(p, lambda(x, app(p, lambda(y, pred(vi_tri, [x, y])))))).
-
-% ========================================
-% 11. TỪ ĐỂ HỎI (WH-WORDS)
-% Lambda semantics theo Slide-DOAN-01
-% ========================================
-
-% "Ai" - Who question (Subject position)
-% Kiểu: (e→t) → t
-% Format: λVP. wh_question(who, VP@_)
-% Khi áp dụng vào VP, ta được câu hỏi với placeholder cho subject
+% "Ai" (Who) - Tạo biến mới để tránh conflict
 word_semantics(ai, wh_word, 
-    lambda(vp, wh_question(who, app(vp, x)))).
+    lambda(p, merge(drs([wh_x], []), app(p, wh_x)))).
 
-% "Gì" - What question (Object position)
-% Kiểu: ((e→t)→t) (như một NP bình thường)
-% Format: λP. wh_question(what, P@_)
-% Được dùng như object của động từ ngoại động
+% "Gì" (What) - Tạo biến mới để tránh conflict  
 word_semantics(gi, wh_word, 
-    lambda(p, wh_question(what, app(p, x)))).
+    lambda(p, merge(drs([wh_y], []), app(p, wh_y)))).
 
-% "Đâu", "Ở đâu" - Where question
-% Kiểu: (e→t) → t
-% Format: λVP. wh_question(where, VP@_)
+% "Đâu" (Where) - Tạo biến mới để tránh conflict
 word_semantics(dau, wh_word, 
-    lambda(vp, wh_question(where, app(vp, x)))).
-
-word_semantics(o_dau, wh_word, 
-    lambda(vp, wh_question(where, app(vp, x)))).
-
-% "Nào" - Which question
-word_semantics(nao, wh_word, wh(which)).
-
-% ========================================
-% 12. QUESTION MARKERS
-% ========================================
-
-word_semantics(khong, question_marker, question).
-word_semantics(ko, question_marker, question).
-word_semantics(phai_khong, question_marker, question).
-word_semantics(phai, question_marker, question).
-word_semantics(chua, question_marker, question).
-
-% ========================================
-% 13. THUỘC TÍNH ĐẶC BIỆT
-% ========================================
-
-word_semantics(mau, attribute, attr(mau_sac)).
-word_semantics(ten_la, attribute, attr(ten)).
+    lambda(p, merge(drs([wh_z], []), app(p, wh_z)))).
 
 % ========================================
 % SEMANTIC TYPES
-% Hệ thống kiểu ngữ nghĩa theo Montague
 % ========================================
-
-% e - entity type
-% t - truth value type
-% e→t - property type (từ entity đến truth)
-% (e→t)→t - generalized quantifier type (cho NP)
-% (e→t)→(e→t) - modifier type
 
 semantic_type(noun_proper, '(e->t)->t').
 semantic_type(noun_common, 'e->t').
+semantic_type(noun_relation, '((e->t)->t)->(e->t)').
+semantic_type(adjective, 'e->t').
 semantic_type(verb_intrans, 'e->t').
 semantic_type(verb_trans, '((e->t)->t)->(e->t)').
 semantic_type(verb_ditrans, '((e->t)->t)->((e->t)->t)->(e->t)').
 semantic_type(determiner, '(e->t)->((e->t)->t)').
-semantic_type(adjective, '(e->t)->(e->t)').
 semantic_type(preposition, '((e->t)->t)->(e->t)->(e->t)').
-semantic_type(wh_word, 'special').
+semantic_type(pronoun, '(e->t)->t').
+semantic_type(wh_word, '(e->t)->t').
 
 % ========================================
 % TYPE CHECKING
-% Kiểm tra biểu thức hợp lệ
 % ========================================
 
-type_check(const(_), e).
-type_check(pred(_, _), t).
-type_check(lambda(_, Body), _) :-
-    type_check(Body, _).
-type_check(app(F, A), _) :-
-    type_check(F, _),
-    type_check(A, _).
-type_check(exists(_, Body), t) :-
-    type_check(Body, t).
-type_check(forall(_, Body), t) :-
-    type_check(Body, t).
-type_check(conj(A, B), t) :-
+type_check(drs(_, _), t).
+type_check(merge(A, B), t) :-
     type_check(A, t),
     type_check(B, t).
 type_check(impl(A, B), t) :-
     type_check(A, t),
     type_check(B, t).
-type_check(neg(A), t) :-
-    type_check(A, t).
+type_check(lambda(_, Body), _) :-
+    type_check(Body, _).
+type_check(app(F, A), _) :-
+    type_check(F, _),
+    type_check(A, _).
+type_check(wh_question(_, Body), t) :-
+    type_check(Body, _).
+type_check(pronoun_drs(_, Body), t) :-
+    type_check(Body, t).
+type_check(X, e) :- atom(X).
+
+% ========================================
+% 15. TỪ PHỦ ĐỊNH (NEGATION)
+% Format: λP. λX. ¬(P@X)
+% ========================================
+
+word_semantics(khong, adv_neg, 
+    lambda(p, lambda(x, neg(app(p, x))))).
+
+semantic_type(adv_neg, '(e->t)->(e->t)').
